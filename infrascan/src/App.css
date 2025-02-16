@@ -42,3 +42,70 @@
   width: 100% !important;
 }
 
+
+/* MapComponent.css */
+.container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+.sidebar {
+  width: 25%;
+  background-color: white;
+  padding: 20px;
+  box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.title {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  font-size: 18px;
+  margin-bottom: 5px;
+}
+
+.flag {
+  width: 20px;
+  height: 15px;
+  border-radius: 3px;
+}
+
+.location {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.shop-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  color: white;
+  background-color: #007bff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.shop-button:hover {
+  background-color: #0056b3;
+}
+
+.clear-button {
+  background-color: #dc3545;
+}
+
+.clear-button:hover {
+  background-color: #a71d2a;
+}
+
+.map-container {
+  height: 100%;
+  width: 75%;
+}
+
