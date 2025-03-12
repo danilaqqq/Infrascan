@@ -1,3 +1,4 @@
+// npm start
 import MapComponent from "./MapComponent";
 
 function App() {
