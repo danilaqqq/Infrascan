@@ -109,7 +109,7 @@
   align-items: center;
 }
 
-.shop-button {
+.analysis-button {
   width: 296px;
   height: 36px;
   padding: 10px 20px;
@@ -121,7 +121,7 @@
   cursor: pointer;
 }
 
-.shop-button:hover {
+.analysis-button:hover {
   background-color: #0056b3;
 }
 
@@ -176,8 +176,93 @@
   text-align: left;
   cursor: pointer;
   transition: background 0.3s ease;
+
+  opacity: 0;
+  transform: translateY(-10px);
+  animation: fadeIn 0.5s ease-out forwards;
 }
+
+.shop-list.removing .shop-item {
+  animation: fadeOut 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+.shop-item:nth-child(1) { animation-delay: 0s; }
+.shop-item:nth-child(2) { animation-delay: 0.2s; }
+.shop-item:nth-child(3) { animation-delay: 0.4s; }
+.shop-item:nth-child(4) { animation-delay: 0.6s; }
+.shop-item:nth-child(5) { animation-delay: 0.8s; }
+.shop-item:nth-child(6) { animation-delay: 1.0s; }
+.shop-item:nth-child(7) { animation-delay: 1.2s; }
+.shop-item:nth-child(8) { animation-delay: 1.4s; }
+.shop-item:nth-child(9) { animation-delay: 1.6s; }
+.shop-item:nth-child(10) { animation-delay: 1.8s; }
 
 .shop-item:hover {
   background: #d9edf7;
+}
+
+.category-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+  margin: 20px auto;
+  text-align: center;
+}
+
+.category-button-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.category-button {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 5px solid #007bff;
+  background-color: #d1e8f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.category-button img {
+  width: 60px;
+  height: 60px;
+  border-radius: 0%;
+}
+
+.category-button:hover {
+  background-color: #0056b3;
+}
+
+.category-label {
+  margin-top: 5px;
+  font-size: 16px;
+  font-weight: 500;
 }
