@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMapEvents } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "./App.css";
+import ClickableMap from "./ClickableMap";
 
 // PNG маркера с его тенью
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -18,7 +19,7 @@ const customIcon = new L.Icon({
 });
 
 
-// Создания маркера с учётом типа и выделенности
+// Создание маркера с учётом типа и выделенности
 const createCustomMarker = (type, isHighlighted = false) => {
   const iconSize = isHighlighted ? [45, 45] : [30, 30]; // Размер зависит от выделенности
   const iconAnchor = [iconSize[0] / 2, iconSize[1]];
@@ -33,7 +34,7 @@ const createCustomMarker = (type, isHighlighted = false) => {
 };
 
 const MapComponent = () => {
-  const [position, setPosition] = useState([51.505, -0.09]);
+  const [position, setPosition] = useState([23.3345, 9.0598]);
   const [location, setLocation] = useState({ country: "Неизвестно", region: "Неизвестно", city: "Неизвестно", countryCode: "xx" });
   const [shops, setShops] = useState([]);
   const [hoveredShopId, setHoveredShopId] = useState(null);
@@ -69,11 +70,12 @@ const MapComponent = () => {
   const [isRemoving, setIsRemoving] = useState(false);
 
   useEffect(() => {
+
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const { latitude, longitude } = pos.coords;
-          setPosition([59.9847, 30.344]);
+          //const { latitude, longitude } = pos.coords;
+          //setPosition([59.9847, 30.344]);
           //setPosition([latitude, longitude]);
 
           
@@ -92,18 +94,18 @@ const MapComponent = () => {
       );
     }
   }, []);
-
   
+
   const findShops = async () => {
-    clearAllObjects();
-    const [lat, lon] = position;
+    //clearAllObjects();
+    const {lat, lng} = position;
     const radius = 1000;
 
     const query = `
       [out:json];
       (
-        node["shop"="supermarket"](around:${radius}, ${lat}, ${lon});
-        node["shop"="convenience"](around:${radius}, ${lat}, ${lon});
+        node["shop"="supermarket"](around:${radius}, ${lat}, ${lng});
+        node["shop"="convenience"](around:${radius}, ${lat}, ${lng});
       );
       out body;
     `;
@@ -121,7 +123,7 @@ const MapComponent = () => {
           lon: shop.lon,
           name: shop.tags.name || "Магазин",
           hours: shop.tags.opening_hours || "Нет информации",
-          distance: getDistance(lat, lon, shop.lat, shop.lon),
+          distance: getDistance(lat, lng, shop.lat, shop.lon),
         }));
 
         foundShops.sort((a, b) => a.distance - b.distance);
@@ -137,7 +139,7 @@ const MapComponent = () => {
   /*const findObjectsByCategory = async (objectsCategory) => {
     clearAllObjects();
     
-    const [lat, lon] = position;
+    const [lat, lng] = position;
     searchRadius = categoriesRadius.objectsCategory;
     
     const categoriesQuery =
@@ -154,7 +156,7 @@ const MapComponent = () => {
     const overpassQuery = `
       [out:json];
       (
-        ${query}(around:${searchRadius}, ${lat}, ${lon});
+        ${query}(around:${searchRadius}, ${lat}, ${lng});
       );
       out center;
     `;
@@ -172,7 +174,7 @@ const MapComponent = () => {
           lon: shop.lon,
           name: shop.tags.name || "Магазин",
           hours: shop.tags.opening_hours || "Нет информации",
-          distance: getDistance(lat, lon, shop.lat, shop.lon),
+          distance: getDistance(lat, lng, shop.lat, shop.lon),
         }));
 
         foundShops.sort((a, b) => a.distance - b.distance);
@@ -187,37 +189,38 @@ const MapComponent = () => {
 
 
   const analyseNearbyInfrastructure = async () => {
-    
-    const [lat, lon] = position;
+
+    const {lat, lng} = position;
+    console.log(lat, lng);
 
     const overpassQuery = `
         [out:json];
         (
-            node["shop"="supermarket"](around:${categoriesRadius.shops}, ${lat}, ${lon});
-            node["shop"="convenience"](around:${categoriesRadius.shops}, ${lat}, ${lon});
+            node["shop"="supermarket"](around:${categoriesRadius.shops}, ${lat}, ${lng});
+            node["shop"="convenience"](around:${categoriesRadius.shops}, ${lat}, ${lng});
             
-            node["amenity"="pharmacy"](around:${categoriesRadius.pharmacies},${lat},${lon});
+            node["amenity"="pharmacy"](around:${categoriesRadius.pharmacies},${lat},${lng});
             
-            node["public_transport"="stop_position"](around:${categoriesRadius.transport_nodes},${lat},${lon});
+            node["public_transport"="stop_position"](around:${categoriesRadius.transport_nodes},${lat},${lng});
             
-            node["amenity"~"clinic|hospital"](around:${categoriesRadius.clinics},${lat},${lon});
+            node["amenity"~"clinic|hospital"](around:${categoriesRadius.clinics},${lat},${lng});
             
-            node["shop"="mall"](around:${categoriesRadius.malls},${lat},${lon});
-            way["shop"="mall"](around:${categoriesRadius.malls},${lat},${lon});
-            relation["shop"="mall"](around:${categoriesRadius.malls},${lat},${lon});
+            node["shop"="mall"](around:${categoriesRadius.malls},${lat},${lng});
+            way["shop"="mall"](around:${categoriesRadius.malls},${lat},${lng});
+            relation["shop"="mall"](around:${categoriesRadius.malls},${lat},${lng});
 
-            way["leisure"="park"](around:${categoriesRadius.parks},${lat},${lon});
-            relation["leisure"="park"](around:${categoriesRadius.parks},${lat},${lon});
+            way["leisure"="park"](around:${categoriesRadius.parks},${lat},${lng});
+            relation["leisure"="park"](around:${categoriesRadius.parks},${lat},${lng});
 
-            node["amenity"="bank"](around:${categoriesRadius.banks},${lat},${lon});
+            node["amenity"="bank"](around:${categoriesRadius.banks},${lat},${lng});
 
-            node["amenity"="kindergarten"](around:${categoriesRadius.kindergartens},${lat},${lon});
-            way["amenity"="kindergarten"](around:${categoriesRadius.kindergartens},${lat},${lon});
-            relation["amenity"="kindergarten"](around:${categoriesRadius.kindergartens},${lat},${lon});
+            node["amenity"="kindergarten"](around:${categoriesRadius.kindergartens},${lat},${lng});
+            way["amenity"="kindergarten"](around:${categoriesRadius.kindergartens},${lat},${lng});
+            relation["amenity"="kindergarten"](around:${categoriesRadius.kindergartens},${lat},${lng});
 
-            node["amenity"="school"](around:${categoriesRadius.schools},${lat},${lon});
-            way["amenity"="school"](around:${categoriesRadius.schools},${lat},${lon});
-            relation["amenity"="school"](around:${categoriesRadius.schools},${lat},${lon});
+            node["amenity"="school"](around:${categoriesRadius.schools},${lat},${lng});
+            way["amenity"="school"](around:${categoriesRadius.schools},${lat},${lng});
+            relation["amenity"="school"](around:${categoriesRadius.schools},${lat},${lng});
         );
         out center;
     `;
@@ -239,7 +242,7 @@ const MapComponent = () => {
             lon: shop.lon,
             name: shop.tags.name || "Магазин",
             hours: shop.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lon, shop.lat, shop.lon),
+            distance: getDistance(lat, lng, shop.lat, shop.lon),
           }));
           const foundPharmacies = data.elements
           .filter((el) => el.tags.amenity === "pharmacy")
@@ -249,7 +252,7 @@ const MapComponent = () => {
             lon: pharmacy.lon,
             name: pharmacy.tags.name || "Аптека",
             hours: pharmacy.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lon, pharmacy.lat, pharmacy.lon),
+            distance: getDistance(lat, lng, pharmacy.lat, pharmacy.lon),
           }));
           const foundTransportNodes = data.elements
           .filter((el) => el.tags.public_transport === "stop_position")
@@ -258,7 +261,7 @@ const MapComponent = () => {
             lat: stop_position.lat,
             lon: stop_position.lon,
             name: stop_position.tags.name || "Остановка",
-            distance: getDistance(lat, lon, stop_position.lat, stop_position.lon),
+            distance: getDistance(lat, lng, stop_position.lat, stop_position.lon),
           }));
           const foundClinics = data.elements
           .filter((el) => el.tags.amenity === "clinic")
@@ -268,7 +271,7 @@ const MapComponent = () => {
             lon: clinic.lon,
             name: clinic.tags.name || "Поликлиника",
             hours: clinic.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lon, clinic.lat, clinic.lon),
+            distance: getDistance(lat, lng, clinic.lat, clinic.lon),
           }));
           const foundMalls = data.elements
           .filter((el) => el.tags.shop === "mall")
@@ -278,7 +281,7 @@ const MapComponent = () => {
             lon: mall.lon ?? mall.center?.lon,
             name: mall.tags.name || "Торговый центр",
             hours: mall.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lon, mall.lat ?? mall.center?.lat, mall.lon ?? mall.center?.lon),
+            distance: getDistance(lat, lng, mall.lat ?? mall.center?.lat, mall.lon ?? mall.center?.lon),
           }));
           const foundParks = data.elements
           .filter((el) => el.tags.leisure === "park")
@@ -287,7 +290,7 @@ const MapComponent = () => {
             lat: park.lat ?? park.center?.lat,
             lon: park.lon ?? park.center?.lon,
             name: park.tags.name || "Парк",
-            distance: getDistance(lat, lon, park.lat ?? park.center?.lat, park.lon ?? park.center?.lon),
+            distance: getDistance(lat, lng, park.lat ?? park.center?.lat, park.lon ?? park.center?.lon),
           }));
           const foundBanks = data.elements
           .filter((el) => el.tags.amenity === "bank")
@@ -297,7 +300,7 @@ const MapComponent = () => {
             lon: bank.lon,
             name: bank.tags.name || "Банк",
             hours: bank.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lon, bank.lat, bank.lon),
+            distance: getDistance(lat, lng, bank.lat, bank.lon),
           }));
           
           const foundKindergartens = data.elements
@@ -308,7 +311,7 @@ const MapComponent = () => {
             lon: kindergarten.lon ?? kindergarten.center?.lon,
             name: kindergarten.tags.name || "Детский сад",
             hours: kindergarten.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lon, kindergarten.lat ?? kindergarten.center?.lat, kindergarten.lon ?? kindergarten.center?.lon),
+            distance: getDistance(lat, lng, kindergarten.lat ?? kindergarten.center?.lat, kindergarten.lon ?? kindergarten.center?.lon),
           }));
 
           const foundSchools = data.elements
@@ -319,11 +322,12 @@ const MapComponent = () => {
             lon: school.lon ?? school.center?.lon,
             name: school.tags.name || "Школа",
             hours: school.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lon, school.lat ?? school.center?.lat, school.lon ?? school.center?.lon),
+            distance: getDistance(lat, lng, school.lat ?? school.center?.lat, school.lon ?? school.center?.lon),
           }));
 
           foundShops.sort((a, b) => a.distance - b.distance);
           setShops(foundShops.slice(0, 1));
+          console.log(foundShops);
 
           foundPharmacies.sort((a, b) => a.distance - b.distance);
           setPharmacies(foundPharmacies.slice(0, 1));
@@ -357,7 +361,7 @@ const MapComponent = () => {
     }
   }
 
-  const clearAllObjects = () => {
+  const clearAllObjects = (animation) => {
     setIsRemoving(true); // Добавляем класс `removing`
   
     setTimeout(() => {  
@@ -376,16 +380,16 @@ const MapComponent = () => {
   };
 
   //Формула Хаверсина
-  const getDistance = (lat1, lon1, lat2, lon2) => {
+  const getDistance = (lat1, lng1, lat2, lng2) => {
     const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const dlng = (lng2 - lng1) * (Math.PI / 180);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(lat1 * (Math.PI / 180)) *
         Math.cos(lat2 * (Math.PI / 180)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+        Math.sin(dlng / 2) *
+        Math.sin(dlng / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return Math.round(R * c * 1000);
   };
@@ -520,14 +524,8 @@ const MapComponent = () => {
         </div>
       </div>
 
-      <MapContainer center={position} zoom={13} className="map-container">
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-        <Marker position={position} icon={customIcon}>
-          <Popup>Вы здесь! 📍</Popup>
-        </Marker>
+      <ClickableMap position={position} setPosition={setPosition} customIcon={customIcon}>
+        
         {shops.map((shop) => (
           <Marker key={shop.id} position={[shop.lat, shop.lon]} icon={createCustomMarker("shop", hoveredShopId === shop.id)}  ref={(ref) => (markerRefs.current[shop.id] = ref)} >
             <Popup>
@@ -598,7 +596,7 @@ const MapComponent = () => {
             </Popup>
           </Marker>
         ))}
-      </MapContainer>
+      </ClickableMap>
     </div>
   );
 };
