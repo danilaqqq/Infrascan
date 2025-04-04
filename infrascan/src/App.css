@@ -83,6 +83,7 @@
 
 .map-container {
   flex-grow: 1;
+  position: relative;
 }
 
 .title {
@@ -119,6 +120,10 @@
   border: none;
   border-radius: 24px;
   cursor: pointer;
+}
+
+.analysis-button.active {
+  background-color: red;
 }
 
 .analysis-button:hover {
@@ -265,4 +270,19 @@
   margin-top: 5px;
   font-size: 16px;
   font-weight: 500;
+}
+
+.map-tooltip {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 999;
+  pointer-events: none;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
 }
