@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Rectangle, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Rectangle, useMapEvents} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L, { bounds } from "leaflet";
 import "./App.css";
+import HeatmapLayer from './HeatmapComponent'
+import * as turf from '@turf/turf';
 
 // PNG маркера с его тенью
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -17,6 +19,7 @@ const customIcon = new L.Icon({
   popupAnchor: [1, -34],
 });
 
+// Расчет площади выделенной области
 const calculateArea = (bounds) => {
   if (!bounds) return 0;
   const [sw, ne] = bounds;
@@ -71,9 +74,21 @@ const MapInteraction = ({ analysisModeIsActive, setMarker, setPosition, setSelec
       console.log(area);
       if (area > 2) {
         setTempSelection(null);
+        return;
       } else {
         setSelection(tempSelection.bounds);
       }
+
+       // Генерация точек сетки
+      const gridPoints = generateGridPoints(tempSelection.bounds);
+      // Запрос к Overpass API для каждой точки
+      checkPoints(gridPoints).then(results => {
+        setSelection({
+          bounds: tempSelection.bounds,
+          points: results // Массив с результатами проверки
+        });
+      });
+
       setTempSelection(null);
     },
   });
@@ -81,6 +96,54 @@ const MapInteraction = ({ analysisModeIsActive, setMarker, setPosition, setSelec
   return null;
 };
 
+const generateGridPoints = (bounds) => {
+  const [sw, ne] = bounds;
+  
+  const minLng = Math.min(sw.lng, ne.lng);
+  const maxLng = Math.max(sw.lng, ne.lng);
+  const minLat = Math.min(sw.lat, ne.lat);
+  const maxLat = Math.max(sw.lat, ne.lat);
+  const bbox = [minLng, minLat, maxLng, maxLat];
+
+  // Сетка с шагом ~50 метров (0.05 км)
+  const grid = turf.pointGrid(bbox, 0.05, { units: 'kilometers' });
+  return grid.features.map(feature => ({
+    lng: feature.geometry.coordinates[0],
+    lat: feature.geometry.coordinates[1]
+  }));
+};
+
+const checkPoints = async (points) => {
+  console.log("Incoming points:", points);
+  return Promise.all(points.map(async (point) => {
+    try {
+      const query = `[out:json];
+        node[amenity](around:50,${point.lat},${point.lng});
+        out count;`;
+
+      const response = await fetch(
+        `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
+      );
+      
+      const data = await response.json();
+      const hasObjects = data.elements.length > 0;
+      console.log("Point has objects ", hasObjects);
+      return {
+        ...point,
+        hasObject: hasObjects,
+        color: hasObjects ? 'green' : 'red',
+        intensity: hasObjects ? 1 : 0.3
+      };
+    } catch (error) {
+      return {
+        ...point,
+        hasObject: false,
+        color: 'gray',
+        intensity: 0.1
+      };
+    }
+  }));
+};
 
 const MapComponent = () => {
   const [position, setPosition] = useState([23.3345, 9.0598]);
@@ -203,8 +266,14 @@ const MapComponent = () => {
         {tempSelection && (
           <Rectangle key={`react-${tempSelection.color}-${Date.now()}`} bounds={tempSelection.bounds} dashArray="4" color={tempSelection.color} fillColor={tempSelection.color} fillOpacity={0.2}/>
         )}
-        {selection && (
-          <Rectangle bounds={selection} color="blue" />
+        {selection && !selection?.bounds && (
+            <Rectangle bounds={selection} color="blue" />
+        )}
+        {selection?.bounds && (
+          <>
+            <Rectangle bounds={selection.bounds} color="blue" />
+            <HeatmapLayer points={selection.points}/>
+          </>
         )}
         {analysisModeIsActive && (
         <div className="map-tooltip">
