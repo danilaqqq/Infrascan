@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+/*import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.heat';
@@ -36,6 +36,46 @@ const HeatmapLayer = ({ points }) => {
   }, [points, map]);
 
   return null;
+};
+
+export default HeatmapLayer;*/
+import { Rectangle } from 'react-leaflet';
+import { LatLngBounds } from 'leaflet';
+
+const HeatmapLayer = ({ points }) => {
+  if (!points) return null;
+
+  return (
+    <>
+      {points.map((point, i) => {
+        const { lat, lng, cellSize = 0.05, color, intensity } = point;
+
+        // Перевод из километров в градусы
+        const deltaLat = cellSize / 111; // всегда примерно одинаково
+
+        // Для долготы учтём сжатие к полюсам:
+        const metersPerDegreeLon = 111.32 * Math.cos(lat * Math.PI / 180);
+        const deltaLng = cellSize / metersPerDegreeLon;
+
+        const bounds = [
+          [lat - deltaLat / 2, lng - deltaLng / 2],
+          [lat + deltaLat / 2, lng + deltaLng / 2]
+        ];
+        
+        return (
+          <Rectangle
+            key={i}
+            bounds={bounds}
+            pathOptions={{
+              color: color,
+              weight: 0,
+              fillOpacity: 0.5
+            }}
+          />
+        );
+      })}
+    </>
+  );
 };
 
 export default HeatmapLayer;

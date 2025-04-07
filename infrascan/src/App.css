@@ -130,6 +130,10 @@
   background-color: #0056b3;
 }
 
+.analysis-button.active:hover {
+  background-color: #a71d2a;
+}
+
 .clear-button {
   background-color: #dc3545;
 }
