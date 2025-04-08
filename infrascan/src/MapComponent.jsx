@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Rectangle, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import L, { bounds } from "leaflet";
+import L, { bounds, latLng } from "leaflet";
 import "./App.css";
 import HeatmapLayer from './HeatmapComponent'
 import * as turf from '@turf/turf';
+import { toast, ToastContainer } from 'react-toastify'
 
 // PNG маркера с его тенью
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
+// Радиусы для объектов
 const categoriesRadius = {
   shops: 500,
   pharmacies: 600,
@@ -22,7 +24,235 @@ const categoriesRadius = {
   schools: 1500,
 };
 
-// Настройка маркера
+// Категории инфраструктуры и запросы для их поиска
+const infrastructureCategories = [
+  {
+    key: "shops",
+    radius: categoriesRadius.shops,
+    query: (lat, lng, radius) => `
+      node["shop"~"supermarket|convenience"](around:${radius}, ${lat}, ${lng});
+    `,
+    parser: (elements, lat, lng) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat,
+      lon: el.lon,
+      name: el.tags.name || "Магазин",
+      hours: el.tags.opening_hours || "Нет информации",
+      distance: getDistance(lat, lng, el.lat, el.lon),
+    })),
+  },
+  {
+    key: "pharmacies",
+    radius: categoriesRadius.pharmacies,
+    query: (lat, lng, radius) => `
+      node["amenity"="pharmacy"](around:${radius}, ${lat}, ${lng});
+    `,
+    parser: (elements, lat, lng) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat,
+      lon: el.lon,
+      name: el.tags.name || "Аптека",
+      hours: el.tags.opening_hours || "Нет информации",
+      distance: getDistance(lat, lng, el.lat, el.lon),
+    })),
+  },
+  {
+    key: "transport",
+    radius: categoriesRadius.transport_nodes,
+    query: (lat, lng, radius) => `
+      node["public_transport"="stop_position"](around:${radius}, ${lat}, ${lng});
+    `,
+    parser: (elements, lat, lng) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat,
+      lon: el.lon,
+      name: el.tags.name || "Остановка",
+      distance: getDistance(lat, lng, el.lat, el.lon),
+    })),
+  },
+  {
+    key: "clinics",
+    radius: categoriesRadius.clinics,
+    query: (lat, lng, radius) => `
+      node["amenity"~"clinic|hospital"](around:${radius}, ${lat}, ${lng});
+    `,
+    parser: (elements, lat, lng) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat,
+      lon: el.lon,
+      name: el.tags.name || "Поликлиника",
+      hours: el.tags.opening_hours || "Нет информации",
+      distance: getDistance(lat, lng, el.lat, el.lon),
+    })),
+  },
+  {
+    key: "malls",
+    radius: categoriesRadius.malls,
+    query: (lat, lng, radius) => `
+      node["shop"="mall"](around:${radius},${lat},${lng});
+      way["shop"="mall"](around:${radius},${lat},${lng});
+      relation["shop"="mall"](around:${radius},${lat},${lng});
+    `,
+    parser: (elements, lat, lng) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat ?? el.center?.lat,
+      lon: el.lon ?? el.center?.lon,
+      name: el.tags.name || "Торговый центр",
+      hours: el.tags.opening_hours || "Нет информации",
+      distance: getDistance(lat, lng, el.lat ?? el.center?.lat, el.lon ?? el.center?.lon),
+    })),
+  },
+  {
+    key: "parks",
+    radius: categoriesRadius.parks,
+    query: (lat, lng, radius) => `
+      way["leisure"="park"](around:${radius},${lat},${lng});
+      relation["leisure"="park"](around:${radius},${lat},${lng});
+    `,
+    parser: (elements, lat, lng) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat ?? el.center?.lat,
+      lon: el.lon ?? el.center?.lon,
+      name: el.tags.name || "Парк",
+      distance: getDistance(lat, lng, el.lat ?? el.center?.lat, el.lon ?? el.center?.lon),
+    })),
+  },
+  {
+    key: "banks",
+    radius: categoriesRadius.banks,
+    query: (lat, lng, radius) => `node["amenity"="bank"](around:${radius},${lat},${lng});`,
+    parser: (elements, lat, lng) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat,
+      lon: el.lon,
+      name: el.tags.name || "Банк",
+      hours: el.tags.opening_hours || "Нет информации",
+      distance: getDistance(lat, lng, el.lat, el.lon),
+    })),
+  },
+  {
+    key: "kindergartens",
+    radius: categoriesRadius.kindergartens,
+    query: (lat, lng, radius) => `
+      node["amenity"="kindergarten"](around:${radius},${lat},${lng});
+      way["amenity"="kindergarten"](around:${radius},${lat},${lng});
+      relation["amenity"="kindergarten"](around:${radius},${lat},${lng});
+    `,
+    parser: (elements, lat, lng) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat ?? el.center?.lat,
+      lon: el.lon ?? el.center?.lon,
+      name: el.tags.name || "Детский сад",
+      hours: el.tags.opening_hours || "Нет информации",
+      distance: getDistance(lat, lng, el.lat ?? el.center?.lat, el.lon ?? el.center?.lon),
+    })),
+  },
+  {
+    key: "schools",
+    radius: categoriesRadius.schools,
+    query: (lat, lng, radius) => `
+      node["amenity"="school"](around:${radius},${lat},${lng});
+      way["amenity"="school"](around:${radius},${lat},${lng});
+      relation["amenity"="school"](around:${radius},${lat},${lng});
+    `,
+    parser: (elements, lat, lng) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat ?? el.center?.lat,
+      lon: el.lon ?? el.center?.lon,
+      name: el.tags.name || "Школа",
+      hours: el.tags.opening_hours || "Нет информации",
+      distance: getDistance(lat, lng, el.lat ?? el.center?.lat, el.lon ?? el.center?.lon),
+    })),
+  },
+];
+
+// Таймаут для запросов
+const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+
+// Отправка API запросов
+const fetchOverpass = async (rawQuery) => {
+  const cleanedQuery = rawQuery.replace(/\s+/g, ' ').trim();
+  const finalQuery = `[out:json];(${cleanedQuery});out center;`;
+  const encodedQuery = `data=${encodeURIComponent(finalQuery)}`;
+  console.log("QUERY:", cleanedQuery);
+
+  const response = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: encodedQuery
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text(); // для отладки
+    console.error("Overpass error response:", errorText);
+    throw new Error(`Overpass error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.elements || [];
+};
+
+// Формула Хаверсина
+const getDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+    Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c * 1000);
+};
+
+// Отправка и обработка API запросов
+const sendAndGetAPIRequestResult = async (latlng) => {
+  const { lat, lng } = latlng;
+  const result = {};
+
+  for (const category of infrastructureCategories) {
+    await sleep(500); // задержка между запросами
+    try {
+      const query = category.query(lat, lng, category.radius);
+      const elements = await fetchOverpass(query);
+      result[category.key] = category.parser(elements, lat, lng);
+    } catch (err) {
+      console.error(`Ошибка при загрузке категории ${category.key}:`, err);
+      result[category.key] = [];
+    }
+  }
+
+  return result;
+}
+
+// Отправка и обработка конкретных API запросов
+const sendAndGetAPIRequestResultSpecific = async (latlng, categoryKey) => {
+  const { lat, lng } = latlng;
+  const result = {};
+
+  const category = infrastructureCategories.find((c) => c.key === categoryKey);
+
+  if (!category) {
+    throw new Error(`Категория "${categoryKey}" не найдена.`);
+  }
+
+  const query = category.query(lat, lng, category.radius);
+
+  try {
+    const elements = await fetchOverpass(query);
+    const parsed = category.parser(elements, lat, lng);
+    return parsed;
+  } catch (error) {
+    console.error(`Ошибка при загрузке категории - ${categoryKey}:`, error);
+    return [];
+  }
+}
+
+// Создание кастомного маркера
 const customIcon = new L.Icon({
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
@@ -31,9 +261,9 @@ const customIcon = new L.Icon({
   popupAnchor: [1, -34],
 });
 
-// Создания маркера с учётом типа и выделенности
+// Создание маркера с учётом типа и выделенности
 const createCustomMarker = (type, isHighlighted = false) => {
-  const iconSize = isHighlighted ? [45, 45] : [30, 30]; // Размер зависит от выделенности
+  const iconSize = isHighlighted ? [45, 45] : [30, 30]; 
   const iconAnchor = [iconSize[0] / 2, iconSize[1]];
   const popupAnchor = [0, -iconSize[1]];
 
@@ -54,18 +284,21 @@ const calculateArea = (bounds) => {
   return latDiff * lngDiff;
 };
 
-const MapInteraction = ({ analysisModeIsActive, setMarker, setPosition, analyseNearbyInfrastructure, setSelection, tempSelection, setTempSelection }) => {
+// Взаимодействие с картой при анализе - постановка точка или выделение области
+const MapInteraction = ({ analysisModeIsActive, clearAllObjects, setMarker, setPosition, analyseNearbyInfrastructure, setSelection, tempSelection, setTempSelection }) => {
   useMapEvents({
     click(e) {
-      if (!analysisModeIsActive) return;
+      //if (!analysisModeIsActive) return;
+      clearAllObjects();
       setSelection(null);
       setMarker(e.latlng);
       setPosition(e.latlng);
       console.log(e.latlng);
-      analyseNearbyInfrastructure(e.latlng);
+      if (analysisModeIsActive) analyseNearbyInfrastructure(e.latlng);
     },
     contextmenu(e) {
       if (!analysisModeIsActive) return;
+      clearAllObjects();
       setMarker(null);
       e.originalEvent.preventDefault();
       setTempSelection({
@@ -122,6 +355,7 @@ const MapInteraction = ({ analysisModeIsActive, setMarker, setPosition, analyseN
   return null;
 };
 
+// Создание массива координат из выделенной области
 const generateGridPoints = (bounds) => {
   const [sw, ne] = bounds;
 
@@ -131,7 +365,6 @@ const generateGridPoints = (bounds) => {
   const maxLat = Math.max(sw.lat, ne.lat);
   const bbox = [minLng, minLat, maxLng, maxLat];
 
-  // Сетка с шагом ~50 метров (0.05 км)
   const grid = turf.pointGrid(bbox, 0.05, { units: 'kilometers' });
   return grid.features.map(feature => ({
     lng: feature.geometry.coordinates[0],
@@ -139,48 +372,16 @@ const generateGridPoints = (bounds) => {
   }));
 };
 
+// Анализ инфраструктуры в области для каждой точки массива
 const checkPoints = async (points) => {
   console.log("Incoming points:", points);
   return Promise.all(points.map(async (point) => {
     try {
-      const query = `[out:json];
-        (
-          node["shop"="supermarket"](around:${categoriesRadius.shops}, ${point.lat}, ${point.lng});
-          node["shop"="convenience"](around:${categoriesRadius.shops}, ${point.lat}, ${point.lng});
-            
-          node["amenity"="pharmacy"](around:${categoriesRadius.pharmacies},${point.lat},${point.lng});
-            
-          node["public_transport"="stop_position"](around:${categoriesRadius.transport_nodes},${point.lat},${point.lng});
-            
-          node["amenity"~"clinic|hospital"](around:${categoriesRadius.clinics},${point.lat},${point.lng});
-            
-          node["shop"="mall"](around:${categoriesRadius.malls},${point.lat},${point.lng});
-          way["shop"="mall"](around:${categoriesRadius.malls},${point.lat},${point.lng});
-          relation["shop"="mall"](around:${categoriesRadius.malls},${point.lat},${point.lng});
-  
-          way["leisure"="park"](around:${categoriesRadius.parks},${point.lat},${point.lng});
-          relation["leisure"="park"](around:${categoriesRadius.parks},${point.lat},${point.lng});
-  
-          node["amenity"="bank"](around:${categoriesRadius.banks},${point.lat},${point.lng});
-  
-          node["amenity"="kindergarten"](around:${categoriesRadius.kindergartens},${point.lat},${point.lng});
-          way["amenity"="kindergarten"](around:${categoriesRadius.kindergartens},${point.lat},${point.lng});
-          relation["amenity"="kindergarten"](around:${categoriesRadius.kindergartens},${point.lat},${point.lng});
-  
-          node["amenity"="school"](around:${categoriesRadius.schools},${point.lat},${point.lng});
-          way["amenity"="school"](around:${categoriesRadius.schools},${point.lat},${point.lng});
-          relation["amenity"="school"](around:${categoriesRadius.schools},${point.lat},${point.lng});
-        );
-        out center;`;
 
-      const response = await fetch(
-        `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`
-      );
-
-      const data = await response.json();
+      const data = await sendAndGetAPIRequestResult(point);
       
-      const hasShops = data.elements.filter((el) => el.tags.shop).length > 0;
-    
+      const hasShops = data.shops.length > 0;
+      
       return {
         ...point,
         hasShops: hasShops,
@@ -228,7 +429,20 @@ const MapComponent = () => {
   const [isRemoving, setIsRemoving] = useState(false);
 
   const markerRefs = useRef({});
+  
+  const categorySetters = {
+    shops: setShops,
+    pharmacies: setPharmacies,
+    transport: setTransportNodes,
+    clinics: setClinics,
+    malls: setMalls,
+    parks: setParks,
+    banks: setBanks,
+    kindergartens: setKindergartens,
+    schools: setSchools,
+  };
 
+  // Определение местоположения
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -258,193 +472,63 @@ const MapComponent = () => {
 
   const analyseNearbyInfrastructure = async (latlng) => {
 
-    const { lat, lng } = latlng;
-    console.log(lat, lng);
-    const overpassQuery = `
-        [out:json];
-        (
-            node["shop"="supermarket"](around:${categoriesRadius.shops}, ${lat}, ${lng});
-            node["shop"="convenience"](around:${categoriesRadius.shops}, ${lat}, ${lng});
-            
-            node["amenity"="pharmacy"](around:${categoriesRadius.pharmacies},${lat},${lng});
-            
-            node["public_transport"="stop_position"](around:${categoriesRadius.transport_nodes},${lat},${lng});
-            
-            node["amenity"~"clinic|hospital"](around:${categoriesRadius.clinics},${lat},${lng});
-            
-            node["shop"="mall"](around:${categoriesRadius.malls},${lat},${lng});
-            way["shop"="mall"](around:${categoriesRadius.malls},${lat},${lng});
-            relation["shop"="mall"](around:${categoriesRadius.malls},${lat},${lng});
-  
-            way["leisure"="park"](around:${categoriesRadius.parks},${lat},${lng});
-            relation["leisure"="park"](around:${categoriesRadius.parks},${lat},${lng});
-  
-            node["amenity"="bank"](around:${categoriesRadius.banks},${lat},${lng});
-  
-            node["amenity"="kindergarten"](around:${categoriesRadius.kindergartens},${lat},${lng});
-            way["amenity"="kindergarten"](around:${categoriesRadius.kindergartens},${lat},${lng});
-            relation["amenity"="kindergarten"](around:${categoriesRadius.kindergartens},${lat},${lng});
-  
-            node["amenity"="school"](around:${categoriesRadius.schools},${lat},${lng});
-            way["amenity"="school"](around:${categoriesRadius.schools},${lat},${lng});
-            relation["amenity"="school"](around:${categoriesRadius.schools},${lat},${lng});
-        );
-        out center;
-    `;
+      const data = await sendAndGetAPIRequestResult(latlng);
+      
+      const foundShops = data.shops;
+      foundShops.sort((a, b) => a.distance - b.distance);
+      setShops(foundShops.slice(0, 1));
 
-    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
+      const foundPharmacies = data.pharmacies;
+      foundPharmacies.sort((a, b) => a.distance - b.distance);
+      setPharmacies(foundPharmacies.slice(0, 1));
 
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
+      const foundTransportNodes = data.transport;
+      foundTransportNodes.sort((a, b) => a.distance - b.distance);
+      setTransportNodes(foundTransportNodes.slice(0, 1));
 
-      // Обрабатываем результаты
-      if (data.elements) {
-        console.log(data.elements)
-        const foundShops = data.elements
-          .filter((el) => el.tags.shop)
-          .map((shop) => ({
-            id: shop.id,
-            lat: shop.lat,
-            lon: shop.lon,
-            name: shop.tags.name || "Магазин",
-            hours: shop.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lng, shop.lat, shop.lon),
-          }));
-        const foundPharmacies = data.elements
-          .filter((el) => el.tags.amenity === "pharmacy")
-          .map((pharmacy) => ({
-            id: pharmacy.id,
-            lat: pharmacy.lat,
-            lon: pharmacy.lon,
-            name: pharmacy.tags.name || "Аптека",
-            hours: pharmacy.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lng, pharmacy.lat, pharmacy.lon),
-          }));
-        const foundTransportNodes = data.elements
-          .filter((el) => el.tags.public_transport === "stop_position")
-          .map((stop_position) => ({
-            id: stop_position.id,
-            lat: stop_position.lat,
-            lon: stop_position.lon,
-            name: stop_position.tags.name || "Остановка",
-            distance: getDistance(lat, lng, stop_position.lat, stop_position.lon),
-          }));
-        const foundClinics = data.elements
-          .filter((el) => el.tags.amenity === "clinic")
-          .map((clinic) => ({
-            id: clinic.id,
-            lat: clinic.lat,
-            lon: clinic.lon,
-            name: clinic.tags.name || "Поликлиника",
-            hours: clinic.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lng, clinic.lat, clinic.lon),
-          }));
-        const foundMalls = data.elements
-          .filter((el) => el.tags.shop === "mall")
-          .map((mall) => ({
-            id: mall.id,
-            lat: mall.lat ?? mall.center?.lat,
-            lon: mall.lon ?? mall.center?.lon,
-            name: mall.tags.name || "Торговый центр",
-            hours: mall.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lng, mall.lat ?? mall.center?.lat, mall.lon ?? mall.center?.lon),
-          }));
-        const foundParks = data.elements
-          .filter((el) => el.tags.leisure === "park")
-          .map((park) => ({
-            id: park.id,
-            lat: park.lat ?? park.center?.lat,
-            lon: park.lon ?? park.center?.lon,
-            name: park.tags.name || "Парк",
-            distance: getDistance(lat, lng, park.lat ?? park.center?.lat, park.lon ?? park.center?.lon),
-          }));
-        const foundBanks = data.elements
-          .filter((el) => el.tags.amenity === "bank")
-          .map((bank) => ({
-            id: bank.id,
-            lat: bank.lat,
-            lon: bank.lon,
-            name: bank.tags.name || "Банк",
-            hours: bank.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lng, bank.lat, bank.lon),
-          }));
+      const foundClinics = data.clinics;
+      foundClinics.sort((a, b) => a.distance - b.distance);
+      setClinics(foundClinics.slice(0, 1));
 
-        const foundKindergartens = data.elements
-          .filter((el) => el.tags.amenity === "kindergarten")
-          .map((kindergarten) => ({
-            id: kindergarten.id,
-            lat: kindergarten.lat ?? kindergarten.center?.lat,
-            lon: kindergarten.lon ?? kindergarten.center?.lon,
-            name: kindergarten.tags.name || "Детский сад",
-            hours: kindergarten.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lng, kindergarten.lat ?? kindergarten.center?.lat, kindergarten.lon ?? kindergarten.center?.lon),
-          }));
+      const foundMalls = data.malls;
+      foundMalls.sort((a, b) => a.distance - b.distance);
+      setMalls(foundMalls.slice(0, 1));
 
-        const foundSchools = data.elements
-          .filter((el) => el.tags.amenity === "school")
-          .map((school) => ({
-            id: school.id,
-            lat: school.lat ?? school.center?.lat,
-            lon: school.lon ?? school.center?.lon,
-            name: school.tags.name || "Школа",
-            hours: school.tags.opening_hours || "Нет информации",
-            distance: getDistance(lat, lng, school.lat ?? school.center?.lat, school.lon ?? school.center?.lon),
-          }));
+      const foundParks = data.parks;
+      foundParks.sort((a, b) => a.distance - b.distance);
+      setParks(foundParks.slice(0, 1));
 
-        foundShops.sort((a, b) => a.distance - b.distance);
-        console.log(foundShops);
-        setShops(foundShops.slice(0, 1));
+      const foundBanks = data.banks;
+      foundBanks.sort((a, b) => a.distance - b.distance);
+      setBanks(foundBanks.slice(0, 1));
 
-        foundPharmacies.sort((a, b) => a.distance - b.distance);
-        setPharmacies(foundPharmacies.slice(0, 1));
+      const foundKindergartens = data.kindergartens;
+      foundKindergartens.sort((a, b) => a.distance - b.distance);
+      setKindergartens(foundKindergartens.slice(0, 1));
 
-        foundTransportNodes.sort((a, b) => a.distance - b.distance);
-        setTransportNodes(foundTransportNodes.slice(0, 1));
+      const foundSchools = data.schools;
+      foundSchools.sort((a, b) => a.distance - b.distance);
+      setSchools(foundSchools.slice(0, 1));
 
-        foundClinics.sort((a, b) => a.distance - b.distance);
-        setClinics(foundClinics.slice(0, 1));
-
-        foundMalls.sort((a, b) => a.distance - b.distance);
-        setMalls(foundMalls.slice(0, 1));
-
-        foundParks.sort((a, b) => a.distance - b.distance);
-        setParks(foundParks.slice(0, 1));
-
-        foundBanks.sort((a, b) => a.distance - b.distance);
-        setBanks(foundBanks.slice(0, 1));
-
-        foundKindergartens.sort((a, b) => a.distance - b.distance);
-        setKindergartens(foundKindergartens.slice(0, 1));
-
-        foundSchools.sort((a, b) => a.distance - b.distance);
-        setSchools(foundSchools.slice(0, 1));
-
-        markerRefs.current = {};
-      }
-    } catch (error) {
-      console.error("Ошибка загрузки данных Overpass:", error);
-      return null;
-    }
+      markerRefs.current = {};
   }
 
-  //Формула Хаверсина
-  const getDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return Math.round(R * c * 1000);
-  };
+  const searchTypeOfObjects = async (latlng, category) => {
+    const data = await sendAndGetAPIRequestResultSpecific(latlng, category);
+    const setter = categorySetters[category];
+
+    data.sort((a, b) => a.distance - b.distance);
+    if (setter) {
+      setter(data.slice(0, 10));
+    } else {
+      console.warn(`Нет функции setter для категории "${category}"`);
+    }    
+
+    markerRefs.current = {};
+  }
 
   const clearSelections = () => {
-    setMarker(null);
+    //setMarker(null);
     setSelection(null);
     setTempSelection(null);
     setAnalysisModeIsActive(false);
@@ -487,7 +571,7 @@ const MapComponent = () => {
           className={`analysis-button ${analysisModeIsActive ? 'active' : ''}`}
           onClick={() => {
             if (analysisModeIsActive) { setAnalysisModeIsActive(false); clearSelections(); }
-            else setAnalysisModeIsActive(true);
+            else {setAnalysisModeIsActive(true); if(marker) analyseNearbyInfrastructure(position);}
           }}>
           {analysisModeIsActive ? 'Завершить анализ' : 'Анализ инфраструктуры'}
         </button>
@@ -593,15 +677,51 @@ const MapComponent = () => {
         )}
 
         <div className="category-buttons-grid">
-          <div className="category-button-container"><button className="category-button" ><img src="icons/shopIcon.png" alt="Магазины" /></button><div className="category-label">Магазины</div></div>
-          <div className="category-button-container"><button className="category-button" ><img src="icons/pharmacyIcon.png" alt="Аптеки" /></button><div className="category-label">Аптеки</div></div>
-          <div className="category-button-container"><button className="category-button" ><img src="icons/transportStopIcon.png" alt="Транспорт" /></button><div className="category-label">Транспорт</div></div>
-          <div className="category-button-container"><button className="category-button" ><img src="icons/hospitalIcon.png" alt="Поликлиники" /></button><div className="category-label">Поликлиники</div></div>
-          <div className="category-button-container"><button className="category-button" ><img src="icons/mallIcon.png" alt="Торговые центры" /></button><div className="category-label">Торговые центры</div></div>
-          <div className="category-button-container"><button className="category-button" ><img src="icons/parkIcon.png" alt="Парки" /></button><div className="category-label">Парки</div></div>
-          <div className="category-button-container"><button className="category-button" ><img src="icons/bankIcon.png" alt="Банки" /></button><div className="category-label">Банки</div></div>
-          <div className="category-button-container"><button className="category-button" ><img src="icons/kindergartenIcon.png" alt="Детские сады" /></button><div className="category-label">Детские сады</div></div>
-          <div className="category-button-container"><button className="category-button" ><img src="icons/schoolIcon.png" alt="Школы" /></button><div className="category-label">Школы</div></div>
+          <div className="category-button-container"><button className="category-button"  onClick={() => {
+            if (marker && !analysisModeIsActive) searchTypeOfObjects(position, "shops");
+            if (!marker) {toast.error('Укажите точку на карте для поиска по категории');}
+            if (analysisModeIsActive) {toast.error('Вы не можете проводить поиск по категории пока находитесь в режиме анализа');}
+          }}><img src="icons/shopIcon.png" alt="Магазины"/></button><div className="category-label">Магазины</div></div>
+          <div className="category-button-container"><button className="category-button" onClick={() => {
+            if (marker && !analysisModeIsActive) searchTypeOfObjects(position, "pharmacies");
+            if (!marker) {toast.error('Укажите точку на карте для поиска по категории');}
+            if (analysisModeIsActive) {toast.error('Вы не можете проводить поиск по категории пока находитесь в режиме анализа');}
+          }}><img src="icons/pharmacyIcon.png" alt="Аптеки" /></button><div className="category-label">Аптеки</div></div>
+          <div className="category-button-container"><button className="category-button" onClick={() => {
+            if (marker && !analysisModeIsActive) searchTypeOfObjects(position, "transport");
+            if (!marker) {toast.error('Укажите точку на карте для поиска по категории');}
+            if (analysisModeIsActive) {toast.error('Вы не можете проводить поиск по категории пока находитесь в режиме анализа');}
+          }}><img src="icons/transportStopIcon.png" alt="Транспорт" /></button><div className="category-label">Транспорт</div></div>
+          <div className="category-button-container"><button className="category-button" onClick={() => {
+            if (marker && !analysisModeIsActive) searchTypeOfObjects(position, "clinics");
+            if (!marker) {toast.error('Укажите точку на карте для поиска по категории');}
+            if (analysisModeIsActive) {toast.error('Вы не можете проводить поиск по категории пока находитесь в режиме анализа');}
+          }}><img src="icons/hospitalIcon.png" alt="Поликлиники" /></button><div className="category-label">Поликлиники</div></div>
+          <div className="category-button-container"><button className="category-button" onClick={() => {
+            if (marker && !analysisModeIsActive) searchTypeOfObjects(position, "malls");
+            if (!marker) {toast.error('Укажите точку на карте для поиска по категории');}
+            if (analysisModeIsActive) {toast.error('Вы не можете проводить поиск по категории пока находитесь в режиме анализа');}
+          }}><img src="icons/mallIcon.png" alt="Торговые центры" /></button><div className="category-label">Торговые центры</div></div>
+          <div className="category-button-container"><button className="category-button" onClick={() => {
+            if (marker && !analysisModeIsActive) searchTypeOfObjects(position, "parks");
+            if (!marker) {toast.error('Укажите точку на карте для поиска по категории');}
+            if (analysisModeIsActive) {toast.error('Вы не можете проводить поиск по категории пока находитесь в режиме анализа');}
+          }}><img src="icons/parkIcon.png" alt="Парки" /></button><div className="category-label">Парки</div></div>
+          <div className="category-button-container"><button className="category-button" onClick={() => {
+            if (marker && !analysisModeIsActive) searchTypeOfObjects(position, "banks");
+            if (!marker) {toast.error('Укажите точку на карте для поиска по категории');}
+            if (analysisModeIsActive) {toast.error('Вы не можете проводить поиск по категории пока находитесь в режиме анализа');}
+          }}><img src="icons/bankIcon.png" alt="Банки" /></button><div className="category-label">Банки</div></div>
+          <div className="category-button-container"><button className="category-button" onClick={() => {
+            if (marker && !analysisModeIsActive) searchTypeOfObjects(position, "kindergartens");
+            if (!marker) {toast.error('Укажите точку на карте для поиска по категории');}
+            if (analysisModeIsActive) {toast.error('Вы не можете проводить поиск по категории пока находитесь в режиме анализа');}
+          }}><img src="icons/kindergartenIcon.png" alt="Детские сады" /></button><div className="category-label">Детские сады</div></div>
+          <div className="category-button-container"><button className="category-button" onClick={() => {
+            if (marker && !analysisModeIsActive) searchTypeOfObjects(position, "schools");
+            if (!marker) {toast.error('Укажите точку на карте для поиска по категории');}
+            if (analysisModeIsActive) {toast.error('Вы не можете проводить поиск по категории пока находитесь в режиме анализа');}
+          }}><img src="icons/schoolIcon.png" alt="Школы" /></button><div className="category-label">Школы</div></div>
         </div>
       </div>
 
@@ -610,7 +730,7 @@ const MapComponent = () => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        <MapInteraction analysisModeIsActive={analysisModeIsActive} setMarker={setMarker} setPosition={setPosition} analyseNearbyInfrastructure={analyseNearbyInfrastructure} setSelection={setSelection} tempSelection={tempSelection} setTempSelection={setTempSelection} />
+        <MapInteraction analysisModeIsActive={analysisModeIsActive} clearAllObjects={clearAllObjects} setMarker={setMarker} setPosition={setPosition} analyseNearbyInfrastructure={analyseNearbyInfrastructure} setSelection={setSelection} tempSelection={tempSelection} setTempSelection={setTempSelection} />
         {shops.map((shop) => (
           <Marker key={shop.id} position={[shop.lat, shop.lon]} icon={createCustomMarker("shop", hoveredShopId === shop.id)} ref={(ref) => (markerRefs.current[shop.id] = ref)} >
             <Popup>
@@ -704,6 +824,7 @@ const MapComponent = () => {
             ℹ️ Анализ в области: Нажмите ПКМ для выделения области, подтвердите ее с помощью ЛКМ. Слишком большая область будет выделена красным.
           </div>
         )}
+        <ToastContainer />
       </MapContainer>
     </div>
   );
