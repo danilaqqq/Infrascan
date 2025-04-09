@@ -11,6 +11,9 @@ import { toast, ToastContainer } from 'react-toastify'
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
+let analysisAbortController = null;
+let latestAnalysisRequestId = 0;
+
 // Радиусы для объектов
 const categoriesRadius = {
   shops: 500,
@@ -170,7 +173,7 @@ const infrastructureCategories = [
 const sleep = (ms) => new Promise(res => setTimeout(res, ms));
 
 // Отправка API запросов
-const fetchOverpass = async (rawQuery) => {
+const fetchOverpass = async (rawQuery, signal) => {
   const cleanedQuery = rawQuery.replace(/\s+/g, ' ').trim();
   const finalQuery = `[out:json];(${cleanedQuery});out center;`;
   const encodedQuery = `data=${encodeURIComponent(finalQuery)}`;
@@ -181,7 +184,8 @@ const fetchOverpass = async (rawQuery) => {
     headers: {
       "Content-Type": "application/x-www-form-urlencoded"
     },
-    body: encodedQuery
+    body: encodedQuery,
+    signal,
   });
 
   if (!response.ok) {
@@ -213,16 +217,25 @@ const getDistance = (lat1, lon1, lat2, lon2) => {
 const sendAndGetAPIRequestResult = async (latlng) => {
   const { lat, lng } = latlng;
   const result = {};
+  
+  if (analysisAbortController) {
+    analysisAbortController.abort();
+  }
+  analysisAbortController = new AbortController();
+  const { signal } = analysisAbortController;
 
   for (const category of infrastructureCategories) {
     await sleep(500); // задержка между запросами
     try {
       const query = category.query(lat, lng, category.radius);
-      const elements = await fetchOverpass(query);
+      const elements = await fetchOverpass(query, signal);
       result[category.key] = category.parser(elements, lat, lng);
-    } catch (err) {
-      console.error(`Ошибка при загрузке категории ${category.key}:`, err);
-      result[category.key] = [];
+    } catch (error) {
+      if (error.name === "AbortError") {
+        console.log(`Запрос ${category.key} прерван`);
+      } else {
+        console.error(`Ошибка при загрузке категории - ${category.key}:`, error);
+      }
     }
   }
 
@@ -234,6 +247,12 @@ const sendAndGetAPIRequestResultSpecific = async (latlng, categoryKey) => {
   const { lat, lng } = latlng;
   const result = {};
 
+  if (analysisAbortController) {
+    analysisAbortController.abort();
+  }
+  analysisAbortController = new AbortController();
+  const { signal } = analysisAbortController;
+
   const category = infrastructureCategories.find((c) => c.key === categoryKey);
 
   if (!category) {
@@ -243,7 +262,7 @@ const sendAndGetAPIRequestResultSpecific = async (latlng, categoryKey) => {
   const query = category.query(lat, lng, category.radius);
 
   try {
-    const elements = await fetchOverpass(query);
+    const elements = await fetchOverpass(query, signal);
     const parsed = category.parser(elements, lat, lng);
     return parsed;
   } catch (error) {
@@ -356,7 +375,7 @@ const MapInteraction = ({ analysisModeIsActive, clearAllObjects, setMarker, setP
 };
 
 // Создание массива координат из выделенной области
-const generateGridPoints = (bounds) => {
+/*const generateGridPoints = (bounds) => {
   const [sw, ne] = bounds;
 
   const minLng = Math.min(sw.lng, ne.lng);
@@ -371,10 +390,65 @@ const generateGridPoints = (bounds) => {
     lat: feature.geometry.coordinates[1]
   }));
 };
+*/
+
+const generateGridPoints = async (bounds) => {
+  const [sw, ne] = bounds;
+
+  const minLat = Math.min(sw.lat, ne.lat);
+  const maxLat = Math.max(sw.lat, ne.lat);
+  const minLng = Math.min(sw.lng, ne.lng);
+  const maxLng = Math.max(sw.lng, ne.lng);
+
+  const bbox = `${minLat},${minLng},${maxLat},${maxLng}`; // south,west,north,east
+
+  const query = `
+    node["shop"~"supermarket|convenience"](${bbox});
+  `;
+
+  try {
+    const elements = await fetchOverpass(query); // твоя функция
+    return elements.map(el => ({
+      id: el.id,
+      lat: el.lat,
+      lon: el.lon
+    }));
+  } catch (error) {
+    console.error("Ошибка при загрузке объектов в области", error);
+    return [];
+  }
+};
+
+const fetchInfrastructureInBounds = async (bounds) => {
+  const [sw, ne] = bounds;
+
+  const minLat = Math.min(sw.lat, ne.lat);
+  const maxLat = Math.max(sw.lat, ne.lat);
+  const minLng = Math.min(sw.lng, ne.lng);
+  const maxLng = Math.max(sw.lng, ne.lng);
+
+  const bbox = `${minLat},${minLng},${maxLat},${maxLng}`; // south,west,north,east
+
+  const query = `
+    node["shop"~"supermarket|convenience"](${bbox});
+  `;
+
+  try {
+    const elements = await fetchOverpass(query); // твоя функция
+    return elements.map(el => ({
+      id: el.id,
+      lat: el.lat,
+      lon: el.lon
+    }));
+  } catch (error) {
+    console.error("Ошибка при загрузке объектов в области", error);
+    return [];
+  }
+};
 
 // Анализ инфраструктуры в области для каждой точки массива
 const checkPoints = async (points) => {
-  console.log("Incoming points:", points);
+  /*console.log("Incoming points:", points);
   return Promise.all(points.map(async (point) => {
     try {
 
@@ -396,8 +470,26 @@ const checkPoints = async (points) => {
         intensity: 0.5
       };
     }
-  }));
-};
+  }));*/
+  const gridPoints = generateGridPoints(bounds);
+  const infrastructurePoints = await fetchInfrastructureInBounds(bounds);
+
+  return gridPoints.map((point) => {
+    const foundNearby = infrastructurePoints.some(infra => {
+      const dist = getDistance(point.lat, point.lng, infra.lat, infra.lon); // твоя функция
+      return dist < 100; // например, 100 м радиус
+    });
+
+    return {
+      ...point,
+      hasShops: foundNearby,
+      color: foundNearby ? 'green' : 'red',
+      intensity: foundNearby ? 1 : 0.3
+    };
+  });
+}
+
+
 
 const MapComponent = () => {
   const [position, setPosition] = useState([23.3345, 9.0598]);
@@ -442,6 +534,18 @@ const MapComponent = () => {
     schools: setSchools,
   };
 
+  const notFoundCategory = {
+    shops: 'магазины',
+    pharmacies: 'аптеки',
+    transport: 'остановки транспорта',
+    clinics: 'медучереждения',
+    malls: 'торговые центры',
+    parks: 'парки',
+    banks: 'банки',
+    kindergartens: 'детские сады',
+    schools: 'школы',
+  };
+
   // Определение местоположения
   useEffect(() => {
     if ("geolocation" in navigator) {
@@ -472,51 +576,110 @@ const MapComponent = () => {
 
   const analyseNearbyInfrastructure = async (latlng) => {
 
-      const data = await sendAndGetAPIRequestResult(latlng);
+      //clearAllObjects();
       
+      const currentRequestId = ++latestAnalysisRequestId; // увеличиваем каждый раз
+      let data;
+      let notFoundErr = "";
+
+      try {
+        data = await sendAndGetAPIRequestResult(latlng);
+      } catch (err) {
+        if (err.name === "AbortError") {
+          console.log("Анализ прерван пользователем");
+        } else {
+          console.error("Ошибка при анализе:", err);
+        }
+        return;
+      }
+
+      // Если в момент завершения запроса это уже неактуальный вызов — игнорируем
+      if (currentRequestId !== latestAnalysisRequestId) {
+        console.log("Результат анализа устарел, игнорируется");
+        return;
+      }
+
       const foundShops = data.shops;
       foundShops.sort((a, b) => a.distance - b.distance);
       setShops(foundShops.slice(0, 1));
+      if(foundShops.length == 0) notFoundErr += ", " + notFoundCategory.shops;
 
       const foundPharmacies = data.pharmacies;
       foundPharmacies.sort((a, b) => a.distance - b.distance);
       setPharmacies(foundPharmacies.slice(0, 1));
+      if(foundPharmacies.length == 0) notFoundErr += ", " + notFoundCategory.pharmacies;
 
       const foundTransportNodes = data.transport;
       foundTransportNodes.sort((a, b) => a.distance - b.distance);
       setTransportNodes(foundTransportNodes.slice(0, 1));
+      if(foundTransportNodes.length == 0) notFoundErr += ", " + notFoundCategory.transport;
 
       const foundClinics = data.clinics;
       foundClinics.sort((a, b) => a.distance - b.distance);
       setClinics(foundClinics.slice(0, 1));
+      if(foundClinics.length == 0) notFoundErr += ", " + notFoundCategory.clinics;
 
       const foundMalls = data.malls;
       foundMalls.sort((a, b) => a.distance - b.distance);
       setMalls(foundMalls.slice(0, 1));
+      if(foundMalls.length == 0) notFoundErr += ", " + notFoundCategory.malls;
 
       const foundParks = data.parks;
       foundParks.sort((a, b) => a.distance - b.distance);
       setParks(foundParks.slice(0, 1));
+      if(foundParks.length == 0) notFoundErr += ", " + notFoundCategory.parks;
 
       const foundBanks = data.banks;
       foundBanks.sort((a, b) => a.distance - b.distance);
       setBanks(foundBanks.slice(0, 1));
+      if(foundBanks.length == 0) notFoundErr += ", " + notFoundCategory.banks;
 
       const foundKindergartens = data.kindergartens;
       foundKindergartens.sort((a, b) => a.distance - b.distance);
       setKindergartens(foundKindergartens.slice(0, 1));
+      if(foundKindergartens.length == 0) notFoundErr += ", " + notFoundCategory.kindergartens;
 
       const foundSchools = data.schools;
       foundSchools.sort((a, b) => a.distance - b.distance);
       setSchools(foundSchools.slice(0, 1));
+      if(foundSchools.length == 0) notFoundErr += ", " + notFoundCategory.schools;
+
+      if(notFoundErr.length > 1) toast.info(`К сожалению${notFoundErr} не найдены поблизости.`);
+      notFoundErr = "";
 
       markerRefs.current = {};
   }
 
   const searchTypeOfObjects = async (latlng, category) => {
-    const data = await sendAndGetAPIRequestResultSpecific(latlng, category);
-    const setter = categorySetters[category];
+    clearAllObjects();
 
+    const setter = categorySetters[category];
+    const notFoundErr = notFoundCategory[category];
+
+    const currentRequestId = ++latestAnalysisRequestId; // увеличиваем каждый раз
+    let data;
+
+    try {
+      data = await sendAndGetAPIRequestResultSpecific(latlng, category);
+    } catch (err) {
+       if (err.name === "AbortError") {
+        console.log("Анализ прерван пользователем");
+      } else {
+        console.error("Ошибка при анализе:", err);
+      }
+      return;
+    }
+
+    // Если в момент завершения запроса это уже неактуальный вызов — игнорируем
+    if (currentRequestId !== latestAnalysisRequestId) {
+      console.log("Результат анализа устарел, игнорируется");
+      return;
+    }
+
+    if(data.length == 0) {
+      toast.info(`К сожалению, ${notFoundErr} не найдены поблизости.`);
+      return;
+    }
     data.sort((a, b) => a.distance - b.distance);
     if (setter) {
       setter(data.slice(0, 10));
@@ -533,6 +696,11 @@ const MapComponent = () => {
     setTempSelection(null);
     setAnalysisModeIsActive(false);
     clearAllObjects();
+    
+    if (analysisAbortController) {
+      analysisAbortController.abort();
+      analysisAbortController = null;
+    }
   };
 
   const clearAllObjects = () => {
@@ -550,7 +718,7 @@ const MapComponent = () => {
       setSchools([]);
 
       setIsRemoving(false);
-    }, 1000);
+    }, 300);
   };
 
   return (
@@ -824,7 +992,7 @@ const MapComponent = () => {
             ℹ️ Анализ в области: Нажмите ПКМ для выделения области, подтвердите ее с помощью ЛКМ. Слишком большая область будет выделена красным.
           </div>
         )}
-        <ToastContainer />
+        <ToastContainer autoClose={8000}/>
       </MapContainer>
     </div>
   );
