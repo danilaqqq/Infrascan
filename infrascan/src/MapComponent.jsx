@@ -34,14 +34,28 @@ const infrastructureCategories = [
     radius: categoriesRadius.shops,
     query: (lat, lng, radius) => `
       node["shop"~"supermarket|convenience"](around:${radius}, ${lat}, ${lng});
+      way["shop"~"supermarket|convenience"](around:${radius}, ${lat}, ${lng});
+      relation["shop"~"supermarket|convenience"](around:${radius}, ${lat}, ${lng});
+    `,
+    areaQuery: (bbox) => `
+      node["shop"~"supermarket|convenience"](${bbox});
+      way["shop"~"supermarket|convenience"](${bbox});
+      relation["shop"~"supermarket|convenience"](${bbox});
     `,
     parser: (elements, lat, lng) => elements.map(el => ({
       id: el.id,
-      lat: el.lat,
-      lon: el.lon,
+      lat: el.lat ?? el.center?.lat,
+      lon: el.lon ?? el.center?.lon,
       name: el.tags.name || "Магазин",
       hours: el.tags.opening_hours || "Нет информации",
       distance: getDistance(lat, lng, el.lat, el.lon),
+    })),
+    areaParser: (elements) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat ?? el.center?.lat,
+      lon: el.lon ?? el.center?.lon,
+      name: el.tags.name || "Магазин",
+      hours: el.tags.opening_hours || "Нет информации",
     })),
   },
   {
@@ -49,6 +63,9 @@ const infrastructureCategories = [
     radius: categoriesRadius.pharmacies,
     query: (lat, lng, radius) => `
       node["amenity"="pharmacy"](around:${radius}, ${lat}, ${lng});
+    `,
+    areaQuery: (bbox) => `
+      node["amenity"="pharmacy"](${bbox});
     `,
     parser: (elements, lat, lng) => elements.map(el => ({
       id: el.id,
@@ -58,12 +75,22 @@ const infrastructureCategories = [
       hours: el.tags.opening_hours || "Нет информации",
       distance: getDistance(lat, lng, el.lat, el.lon),
     })),
+    areaParser: (elements) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat ?? el.center?.lat,
+      lon: el.lon ?? el.center?.lon,
+      name: el.tags.name || "Аптека",
+      hours: el.tags.opening_hours || "Нет информации",
+    })),
   },
   {
     key: "transport",
     radius: categoriesRadius.transport_nodes,
     query: (lat, lng, radius) => `
       node["public_transport"="stop_position"](around:${radius}, ${lat}, ${lng});
+    `,
+    areaQuery: (bbox) => `
+      node["public_transport"="stop_position"](${bbox});
     `,
     parser: (elements, lat, lng) => elements.map(el => ({
       id: el.id,
@@ -72,12 +99,21 @@ const infrastructureCategories = [
       name: el.tags.name || "Остановка",
       distance: getDistance(lat, lng, el.lat, el.lon),
     })),
+    areaParser: (elements) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat ?? el.center?.lat,
+      lon: el.lon ?? el.center?.lon,
+      name: el.tags.name || "Остановка",
+    })),
   },
   {
     key: "clinics",
     radius: categoriesRadius.clinics,
     query: (lat, lng, radius) => `
       node["amenity"~"clinic|hospital"](around:${radius}, ${lat}, ${lng});
+    `,
+    areaQuery: (bbox) => `
+      node["amenity"~"clinic|hospital"](${bbox});
     `,
     parser: (elements, lat, lng) => elements.map(el => ({
       id: el.id,
@@ -86,6 +122,13 @@ const infrastructureCategories = [
       name: el.tags.name || "Поликлиника",
       hours: el.tags.opening_hours || "Нет информации",
       distance: getDistance(lat, lng, el.lat, el.lon),
+    })),
+    areaParser: (elements) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat ?? el.center?.lat,
+      lon: el.lon ?? el.center?.lon,
+      name: el.tags.name || "Поликлиника",
+      hours: el.tags.opening_hours || "Нет информации",
     })),
   },
   {
@@ -96,6 +139,11 @@ const infrastructureCategories = [
       way["shop"="mall"](around:${radius},${lat},${lng});
       relation["shop"="mall"](around:${radius},${lat},${lng});
     `,
+    areaQuery: (bbox) => `
+      node["shop"="mall"](${bbox});
+      way["shop"="mall"](${bbox});
+      relation["shop"="mall"](${bbox});
+    `,
     parser: (elements, lat, lng) => elements.map(el => ({
       id: el.id,
       lat: el.lat ?? el.center?.lat,
@@ -103,6 +151,13 @@ const infrastructureCategories = [
       name: el.tags.name || "Торговый центр",
       hours: el.tags.opening_hours || "Нет информации",
       distance: getDistance(lat, lng, el.lat ?? el.center?.lat, el.lon ?? el.center?.lon),
+    })),
+    areaParser: (elements) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat ?? el.center?.lat,
+      lon: el.lon ?? el.center?.lon,
+      name: el.tags.name || "Торговый центр",
+      hours: el.tags.opening_hours || "Нет информации",
     })),
   },
   {
@@ -112,6 +167,10 @@ const infrastructureCategories = [
       way["leisure"="park"](around:${radius},${lat},${lng});
       relation["leisure"="park"](around:${radius},${lat},${lng});
     `,
+    areaQuery: (bbox) => `
+      way["leisure"="park"](${bbox});
+      relation["leisure"="park"](${bbox});
+    `,
     parser: (elements, lat, lng) => elements.map(el => ({
       id: el.id,
       lat: el.lat ?? el.center?.lat,
@@ -119,11 +178,22 @@ const infrastructureCategories = [
       name: el.tags.name || "Парк",
       distance: getDistance(lat, lng, el.lat ?? el.center?.lat, el.lon ?? el.center?.lon),
     })),
+    areaParser: (elements) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat ?? el.center?.lat,
+      lon: el.lon ?? el.center?.lon,
+      name: el.tags.name || "Парк",
+    })),
   },
   {
     key: "banks",
     radius: categoriesRadius.banks,
-    query: (lat, lng, radius) => `node["amenity"="bank"](around:${radius},${lat},${lng});`,
+    query: (lat, lng, radius) => `
+      node["amenity"="bank"](around:${radius},${lat},${lng});
+    `,
+    areaQuery: (bbox) => `
+      node["amenity"="bank"](${bbox});
+    `,
     parser: (elements, lat, lng) => elements.map(el => ({
       id: el.id,
       lat: el.lat,
@@ -131,6 +201,13 @@ const infrastructureCategories = [
       name: el.tags.name || "Банк",
       hours: el.tags.opening_hours || "Нет информации",
       distance: getDistance(lat, lng, el.lat, el.lon),
+    })),
+    areaParser: (elements) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat,
+      lon: el.lon,
+      name: el.tags.name || "Банк",
+      hours: el.tags.opening_hours || "Нет информации",
     })),
   },
   {
@@ -141,6 +218,11 @@ const infrastructureCategories = [
       way["amenity"="kindergarten"](around:${radius},${lat},${lng});
       relation["amenity"="kindergarten"](around:${radius},${lat},${lng});
     `,
+    areaQuery: (bbox) => `
+      node["amenity"="kindergarten"](${bbox});
+      way["amenity"="kindergarten"](${bbox});
+      relation["amenity"="kindergarten"](${bbox});
+    `,
     parser: (elements, lat, lng) => elements.map(el => ({
       id: el.id,
       lat: el.lat ?? el.center?.lat,
@@ -148,6 +230,13 @@ const infrastructureCategories = [
       name: el.tags.name || "Детский сад",
       hours: el.tags.opening_hours || "Нет информации",
       distance: getDistance(lat, lng, el.lat ?? el.center?.lat, el.lon ?? el.center?.lon),
+    })),
+    areaParser: (elements) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat ?? el.center?.lat,
+      lon: el.lon ?? el.center?.lon,
+      name: el.tags.name || "Детский сад",
+      hours: el.tags.opening_hours || "Нет информации",
     })),
   },
   {
@@ -158,6 +247,11 @@ const infrastructureCategories = [
       way["amenity"="school"](around:${radius},${lat},${lng});
       relation["amenity"="school"](around:${radius},${lat},${lng});
     `,
+    areaQuery: (bbox) => `
+      node["amenity"="school"](${bbox});
+      way["amenity"="school"](${bbox});
+      relation["amenity"="school"](${bbox});
+    `,
     parser: (elements, lat, lng) => elements.map(el => ({
       id: el.id,
       lat: el.lat ?? el.center?.lat,
@@ -165,6 +259,13 @@ const infrastructureCategories = [
       name: el.tags.name || "Школа",
       hours: el.tags.opening_hours || "Нет информации",
       distance: getDistance(lat, lng, el.lat ?? el.center?.lat, el.lon ?? el.center?.lon),
+    })),
+    areaParser: (elements) => elements.map(el => ({
+      id: el.id,
+      lat: el.lat ?? el.center?.lat,
+      lon: el.lon ?? el.center?.lon,
+      name: el.tags.name || "Школа",
+      hours: el.tags.opening_hours || "Нет информации",
     })),
   },
 ];
@@ -304,10 +405,9 @@ const calculateArea = (bounds) => {
 };
 
 // Взаимодействие с картой при анализе - постановка точка или выделение области
-const MapInteraction = ({ analysisModeIsActive, clearAllObjects, setMarker, setPosition, analyseNearbyInfrastructure, setSelection, tempSelection, setTempSelection }) => {
+const MapInteraction = ({ analysisModeIsActive, clearAllObjects, setMarker, setPosition, analyseNearbyInfrastructure, setSelection, tempSelection, setTempSelection, fetchInfrastructureInBounds }) => {
   useMapEvents({
     click(e) {
-      //if (!analysisModeIsActive) return;
       clearAllObjects();
       setSelection(null);
       setMarker(e.latlng);
@@ -331,7 +431,7 @@ const MapInteraction = ({ analysisModeIsActive, clearAllObjects, setMarker, setP
 
       const newBounds = [tempSelection.bounds[0], e.latlng];
       const area = calculateArea(newBounds);
-      const newColor = area > 2 ? 'red' : 'blue';
+      const newColor = area > 1 ? 'red' : 'blue';
       if (newColor !== tempSelection.color) {
         setTempSelection({
           bounds: newBounds,
@@ -356,139 +456,14 @@ const MapInteraction = ({ analysisModeIsActive, clearAllObjects, setMarker, setP
         return;
       } else {
         setSelection(tempSelection.bounds);
+        fetchInfrastructureInBounds(tempSelection.bounds);
       }
-
-      // Генерация точек сетки
-      const gridPoints = generateGridPoints(tempSelection.bounds);
-      // Запрос к Overpass API для каждой точки
-      checkPoints(gridPoints).then(results => {
-        setSelection({
-          bounds: tempSelection.bounds,
-          points: results // Массив с результатами проверки
-        });
-      });
 
       setTempSelection(null);
     },
   });
   return null;
 };
-
-// Создание массива координат из выделенной области
-/*const generateGridPoints = (bounds) => {
-  const [sw, ne] = bounds;
-
-  const minLng = Math.min(sw.lng, ne.lng);
-  const maxLng = Math.max(sw.lng, ne.lng);
-  const minLat = Math.min(sw.lat, ne.lat);
-  const maxLat = Math.max(sw.lat, ne.lat);
-  const bbox = [minLng, minLat, maxLng, maxLat];
-
-  const grid = turf.pointGrid(bbox, 0.05, { units: 'kilometers' });
-  return grid.features.map(feature => ({
-    lng: feature.geometry.coordinates[0],
-    lat: feature.geometry.coordinates[1]
-  }));
-};
-*/
-
-const generateGridPoints = async (bounds) => {
-  const [sw, ne] = bounds;
-
-  const minLat = Math.min(sw.lat, ne.lat);
-  const maxLat = Math.max(sw.lat, ne.lat);
-  const minLng = Math.min(sw.lng, ne.lng);
-  const maxLng = Math.max(sw.lng, ne.lng);
-
-  const bbox = `${minLat},${minLng},${maxLat},${maxLng}`; // south,west,north,east
-
-  const query = `
-    node["shop"~"supermarket|convenience"](${bbox});
-  `;
-
-  try {
-    const elements = await fetchOverpass(query); // твоя функция
-    return elements.map(el => ({
-      id: el.id,
-      lat: el.lat,
-      lon: el.lon
-    }));
-  } catch (error) {
-    console.error("Ошибка при загрузке объектов в области", error);
-    return [];
-  }
-};
-
-const fetchInfrastructureInBounds = async (bounds) => {
-  const [sw, ne] = bounds;
-
-  const minLat = Math.min(sw.lat, ne.lat);
-  const maxLat = Math.max(sw.lat, ne.lat);
-  const minLng = Math.min(sw.lng, ne.lng);
-  const maxLng = Math.max(sw.lng, ne.lng);
-
-  const bbox = `${minLat},${minLng},${maxLat},${maxLng}`; // south,west,north,east
-
-  const query = `
-    node["shop"~"supermarket|convenience"](${bbox});
-  `;
-
-  try {
-    const elements = await fetchOverpass(query); // твоя функция
-    return elements.map(el => ({
-      id: el.id,
-      lat: el.lat,
-      lon: el.lon
-    }));
-  } catch (error) {
-    console.error("Ошибка при загрузке объектов в области", error);
-    return [];
-  }
-};
-
-// Анализ инфраструктуры в области для каждой точки массива
-const checkPoints = async (points) => {
-  /*console.log("Incoming points:", points);
-  return Promise.all(points.map(async (point) => {
-    try {
-
-      const data = await sendAndGetAPIRequestResult(point);
-      
-      const hasShops = data.shops.length > 0;
-      
-      return {
-        ...point,
-        hasShops: hasShops,
-        color: hasShops ? 'green' : 'red',
-        intensity: hasShops ? 1 : 0.3
-      };
-    } catch (error) {
-      return {
-        ...point,
-        hasShops: false,
-        color: 'gray',
-        intensity: 0.5
-      };
-    }
-  }));*/
-  const gridPoints = generateGridPoints(bounds);
-  const infrastructurePoints = await fetchInfrastructureInBounds(bounds);
-
-  return gridPoints.map((point) => {
-    const foundNearby = infrastructurePoints.some(infra => {
-      const dist = getDistance(point.lat, point.lng, infra.lat, infra.lon); // твоя функция
-      return dist < 100; // например, 100 м радиус
-    });
-
-    return {
-      ...point,
-      hasShops: foundNearby,
-      color: foundNearby ? 'green' : 'red',
-      intensity: foundNearby ? 1 : 0.3
-    };
-  });
-}
-
 
 
 const MapComponent = () => {
@@ -552,9 +527,6 @@ const MapComponent = () => {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
-          //setPosition([59.9847, 30.344]);
-          //setPosition([latitude, longitude]);
-
 
           fetch("https://ipapi.co/json/")
             .then((res) => res.json())
@@ -650,6 +622,53 @@ const MapComponent = () => {
       markerRefs.current = {};
   }
 
+  const fetchInfrastructureInBounds = async (bounds) => {
+    const [sw, ne] = bounds;
+    const result = {};
+    const currentRequestId = ++latestAnalysisRequestId;
+    let notFoundCounter = 0;
+
+    const minLat = Math.min(sw.lat, ne.lat);
+    const maxLat = Math.max(sw.lat, ne.lat);
+    const minLng = Math.min(sw.lng, ne.lng);
+    const maxLng = Math.max(sw.lng, ne.lng);
+  
+    const bbox = `${minLat},${minLng},${maxLat},${maxLng}`;
+  
+    if (analysisAbortController) {
+      analysisAbortController.abort();
+    }
+    analysisAbortController = new AbortController();
+    const { signal } = analysisAbortController;
+  
+    if (currentRequestId !== latestAnalysisRequestId) {
+      console.log("Результат анализа устарел, игнорируется");
+      return;
+    }
+
+    for (const category of infrastructureCategories) {
+      await sleep(500); // задержка между запросами
+      try {
+        const setter = categorySetters[category.key];
+        const query = category.areaQuery(bbox);
+        const elements = await fetchOverpass(query, signal);
+        result[category.key] = category.areaParser(elements);
+        setter(result[category.key]);
+        console.log(result);
+        if(!result[category.key] || result[category.key].length === 0) notFoundCounter++;
+        console.log(notFoundCounter);
+      } catch (error) {
+        if (error.name === "AbortError") {
+          console.log(`Запрос ${category.key} прерван`);
+        } else {
+          console.error(`Ошибка при загрузке категории - ${category.key}:`, error);
+        }
+      }
+    }
+    console.log(infrastructureCategories.length);
+    if(notFoundCounter == infrastructureCategories.length) toast.info(`Не удалось найти никакую инфраструктуру в области.`);
+  };
+
   const searchTypeOfObjects = async (latlng, category) => {
     clearAllObjects();
 
@@ -724,16 +743,26 @@ const MapComponent = () => {
   return (
     <div className="container">
       <div className="sidebar">
-        <h1 className="title">📍nfrascan</h1>
+        <img
+          src="/icons/logo1.png"
+          alt="Логотип"
+          width="350" 
+          height="160"
+        />
         <h2 className="yourlocationtext">Ваше местоположение:</h2>
-        <p className="location">
-          <img
-            src={`https://flagcdn.com/w40/${location.countryCode}.png`}
-            alt="Флаг страны"
-            className="flag"
-          />
-          {location.country}, {location.region}, {location.city}
-        </p>
+        {(location.country != 'Неизвестно') &&
+          <p className="location">
+            <img
+              src={`https://flagcdn.com/w40/${location.countryCode}.png`}
+              alt="Флаг"
+              className="flag"
+            />
+            {location.country}, {location.region}, {location.city}
+          </p>
+        }
+        {(location.country == 'Неизвестно') &&
+          <p>Местоположение не определено</p>
+        }
         <input className="searchbar" type="text" placeholder="Поиск.."></input>
         <button
           className={`analysis-button ${analysisModeIsActive ? 'active' : ''}`}
@@ -898,7 +927,7 @@ const MapComponent = () => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        <MapInteraction analysisModeIsActive={analysisModeIsActive} clearAllObjects={clearAllObjects} setMarker={setMarker} setPosition={setPosition} analyseNearbyInfrastructure={analyseNearbyInfrastructure} setSelection={setSelection} tempSelection={tempSelection} setTempSelection={setTempSelection} />
+        <MapInteraction analysisModeIsActive={analysisModeIsActive} clearAllObjects={clearAllObjects} setMarker={setMarker} setPosition={setPosition} analyseNearbyInfrastructure={analyseNearbyInfrastructure} setSelection={setSelection} tempSelection={tempSelection} setTempSelection={setTempSelection} fetchInfrastructureInBounds={fetchInfrastructureInBounds}/>
         {shops.map((shop) => (
           <Marker key={shop.id} position={[shop.lat, shop.lon]} icon={createCustomMarker("shop", hoveredShopId === shop.id)} ref={(ref) => (markerRefs.current[shop.id] = ref)} >
             <Popup>
