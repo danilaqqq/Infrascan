@@ -38,26 +38,33 @@
 }
 
 .leaflet-container {
-  height: 100vh !important;
+  height: 100% !important;
   width: 100% !important;
 }
 
 
 /* MapComponent.css */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 .container {
   display: flex;
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
 }
 
 .sidebar {
-  width: 25%;
+  width: 20%;
   background-color: #d1e8f8;
   padding: 20px;
   box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
+  z-index: 100;
 
   overflow-y: auto;
   scrollbar-width: thin;
@@ -81,9 +88,74 @@
   background: #555;
 }
 
+.map-searchbar-wrapper {
+  position: absolute;
+  top: 20px;
+  left: 10px;
+  width: 300px;
+  background-color: #d1e8f8;
+  padding: 16px;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  z-index: 1000;
+}
+
+
+.map-searchbar-wrapper::-webkit-scrollbar {
+  width: 8px;
+}
+
+.map-searchbar-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.map-searchbar-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.map-searchbar-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.searchbar2 {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #bbb;
+  border-radius: 5px;
+  outline: none;
+  margin-bottom: 10px;
+}
+
+.dropdown {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  list-style: none;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.dropdown li {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.dropdown li:hover {
+  background-color: #eee;
+}
+
 .map-container {
+  flex: 1;
   flex-grow: 1;
   position: relative;
+  height: 100%;
+  width: 80%;
 }
 
 .title {
@@ -142,11 +214,6 @@
   background-color: #a71d2a;
 }
 
-.map-container {
-  height: 100%;
-  width: 75%;
-}
-
 .searchbar
 {
   width: 284px;
@@ -168,6 +235,16 @@
   color: black;
   margin-top: 20px;
   margin-bottom: 16px;
+}
+
+.littledividerline
+{
+  align-items: center;
+  width: 320px;
+  
+  color: black;
+  margin-top: 10px;
+  margin-bottom: 8px;
 }
 
 .shop-list {

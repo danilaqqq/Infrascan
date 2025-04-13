@@ -1,8 +1,8 @@
 // npm start
-import MapComponent from "./MapComponent";
+import MainComponent from "./MainComponent";
 
 function App() {
-  return <MapComponent />;
+  return <MainComponent />;
 }
 
 export default App;
