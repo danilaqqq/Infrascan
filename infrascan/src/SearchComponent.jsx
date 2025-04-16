@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "./App.css";
@@ -13,13 +13,12 @@ export default function SearchBar({ setSearchResults }) {
   const map = useMap();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
-  const debounceRef = useRef(null);
 
   const fetchData = async (input) => {
     if (!input) return;
 
     const center = map.getCenter();
-    const radius = 5000; // радиус в метрах
+    const radius = 5000;
 
     const queryOverpass = `
       [out:json];
@@ -47,34 +46,30 @@ export default function SearchBar({ setSearchResults }) {
       })).filter(r => r.position[0] && r.position[1]);
 
       setSearchResults(results);
-      setSuggestions(results.slice(0, 5)); // только для dropdown
-      console.log(results);
+      setSuggestions(results.slice(0, 5));
+
       if (results.length > 0) {
-        map.flyTo(results[0].position, 16); // автоцентрирование
+        map.flyTo(results[0].position, 16);
       }
     } catch (error) {
       console.error("Ошибка запроса Overpass API:", error);
     }
   };
 
-  // дебаунс запроса при вводе
-  useEffect(() => {
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      fetchData(query);
-      console.log(query);
-    }, 500);
-  }, [query]);
-
   return (
     <div className="map-searchbar-wrapper">
-      <input
-        className="searchbar2"
-        type="text"
-        placeholder="Поиск..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
+      <div className="searchbar-container">
+        <input
+          className="searchbar2"
+          type="text"
+          placeholder="Поиск..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <button className="search-button" onClick={() => fetchData(query)}>
+          🔍
+        </button>
+      </div>
       {suggestions.length > 0 && (
         <ul className="dropdown">
           {suggestions.map((item) => (

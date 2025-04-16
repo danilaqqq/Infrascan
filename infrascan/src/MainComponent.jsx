@@ -12,6 +12,7 @@ import markerShadow from "leaflet/dist/images/marker-shadow.png";
 const MainComponent = () => {
     const [position, setPosition] = useState([23.3345, 9.0598]);
     const [location, setLocation] = useState({ country: "Неизвестно", region: "Неизвестно", city: "Неизвестно", countryCode: "xx" });
+    const [weather, setWeather] = useState({temp: null, descriptiion: "", icon: ""});
     const [marker, setMarker] = useState(null);
     const [selection, setSelection] = useState(null);
     const [tempSelection, setTempSelection] = useState(null);
@@ -47,29 +48,71 @@ const MainComponent = () => {
     const markerRefs = useRef({});
 
     // Определение местоположения
-    useEffect(() => {
-        if ("geolocation" in navigator) {
+    /*useEffect(() => {
+      if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
             (pos) => {
             const { latitude, longitude } = pos.coords;
 
-            fetch("https://ipapi.co/json/")
+            fetch("https://ipwho.is/?lang=ru")
                 .then((res) => res.json())
                 .then((data) => {
-                console.log(data.country_name, data.region, data.city, data.country_code);
+                console.log(data.country, data.region, data.city, data.country_code);
                 setLocation({
-                    country: data.country_name || "Неизвестно",
+                    country: data.country || "Неизвестно",
                     region: data.region || "Неизвестно",
                     city: data.city || "Неизвестно",
-                    countryCode: data.country_code.toLowerCase()
+                    countryCode: data.country_code.toLowerCase() || ""
                 });
                 })
                 .catch((error) => console.error("Ошибка API местоположения:", error));
             },
             (error) => console.error("Ошибка геолокации:", error)
         );
-        }
+      }
+    }, []);*/
+
+    useEffect(() => {
+      const API_KEY = "8704b97c194f64383768b293c3022e0d";
+    
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          () => {
+            // Получение геолокации
+            fetch("https://ipwho.is/?lang=ru")
+              .then((res) => res.json())
+              .then((data) => {
+                const { country, region, city, country_code, latitude, longitude } = data;
+    
+                setLocation({
+                  country: country || "Неизвестно",
+                  region: region || "Неизвестно",
+                  city: city || "Неизвестно",
+                  countryCode: country_code?.toLowerCase() || ""
+                });
+    
+                // Запрос к погодному API
+                return fetch(
+                  `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&lang=ru&appid=${API_KEY}`
+                );
+              })
+              .then((res) => res.json())
+              .then((weatherData) => {
+                console.log("Погода:", weatherData);
+    
+                setWeather({
+                  temp: Math.round(weatherData.main.temp),
+                  description: weatherData.weather[0].description,
+                  icon: weatherData.weather[0].icon
+                });
+              })
+              .catch((error) => console.error("Ошибка при получении данных:", error));
+          },
+          (error) => console.error("Ошибка геолокации:", error)
+        );
+      }
     }, []);
+    
 
     // Создание кастомного маркера
     const customIcon = new L.Icon({
@@ -238,7 +281,7 @@ const MainComponent = () => {
             else
             {
               foundShops.sort((a, b) => a.distance - b.distance);
-              setShops(foundShops.slice(0, 1));
+              setShops(foundShops.slice(0, 3));
             }
           }
     
@@ -249,7 +292,7 @@ const MainComponent = () => {
             else
             {
               foundPharmacies.sort((a, b) => a.distance - b.distance);
-              setPharmacies(foundPharmacies.slice(0, 1));
+              setPharmacies(foundPharmacies.slice(0, 3));
             }
           }
     
@@ -260,7 +303,7 @@ const MainComponent = () => {
             else
             {
               foundTransportNodes.sort((a, b) => a.distance - b.distance);
-              setTransportNodes(foundTransportNodes.slice(0, 1));
+              setTransportNodes(foundTransportNodes.slice(0, 3));
             }
           }
     
@@ -271,7 +314,7 @@ const MainComponent = () => {
             else
             {
               foundClinics.sort((a, b) => a.distance - b.distance);
-              setClinics(foundClinics.slice(0, 1));
+              setClinics(foundClinics.slice(0, 3));
             }
           }
     
@@ -282,7 +325,7 @@ const MainComponent = () => {
             else
             {
               foundMalls.sort((a, b) => a.distance - b.distance);
-              setMalls(foundMalls.slice(0, 1));
+              setMalls(foundMalls.slice(0, 3));
             }
           }
     
@@ -293,7 +336,7 @@ const MainComponent = () => {
             else
             {
               foundParks.sort((a, b) => a.distance - b.distance);
-              setParks(foundParks.slice(0, 1));
+              setParks(foundParks.slice(0, 3));
             }
           }
     
@@ -304,7 +347,7 @@ const MainComponent = () => {
             else
             {
               foundBanks.sort((a, b) => a.distance - b.distance);
-              setBanks(foundBanks.slice(0, 1));
+              setBanks(foundBanks.slice(0, 3));
             }
           }
     
@@ -315,7 +358,7 @@ const MainComponent = () => {
             else
             {
               foundKindergartens.sort((a, b) => a.distance - b.distance);
-              setKindergartens(foundKindergartens.slice(0, 1));
+              setKindergartens(foundKindergartens.slice(0, 3));
             }
           }
     
@@ -326,7 +369,7 @@ const MainComponent = () => {
             else
             {
               foundSchools.sort((a, b) => a.distance - b.distance);
-              setSchools(foundSchools.slice(0, 1));
+              setSchools(foundSchools.slice(0, 3));
             }
           }
           
@@ -458,6 +501,7 @@ const MainComponent = () => {
         <div className="container">
           <Sidebar
                 location={location} 
+                weather={weather}
                 marker={marker}
                 position={position}
                 shops={shops}

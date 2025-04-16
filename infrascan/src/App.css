@@ -118,14 +118,33 @@ html, body, #root {
   background: #555;
 }
 
+.searchbar-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
 .searchbar2 {
-  width: 100%;
-  padding: 10px;
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-right: none;
+  border-radius: 4px 0 0 4px;
+  font-size: 14px;
+}
+
+.search-button {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
   font-size: 16px;
-  border: 1px solid #bbb;
-  border-radius: 5px;
-  outline: none;
-  margin-bottom: 10px;
+  height: 100%;
+}
+
+.search-button:hover {
+  background-color: #e0e0e0;
 }
 
 .dropdown {
@@ -165,7 +184,7 @@ html, body, #root {
 
 .yourlocationtext {
   font-size: 18px;
-  margin-bottom: 1px;
+  margin-bottom: 3px;
 }
 
 .flag {
@@ -175,10 +194,10 @@ html, body, #root {
 }
 
 .location {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
   margin-top: 1px;
-  margin-bottom: 15px;
+  margin-bottom: 6px;
   align-items: center;
 }
 
@@ -366,4 +385,80 @@ html, body, #root {
   z-index: 999;
   pointer-events: none;
   box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.sidebar-results-container {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.icons-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #d1e8f8;
+  padding-top: 10px;
+}
+
+.objects-column {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.icons-column .icon-button {
+  background-color: #4CAF50; 
+  border: 1px solid green; 
+  color: white; 
+  cursor: pointer; 
+  width: 50%; 
+  display: block; 
+  width: 50px;
+  height: 50px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  position: relative; /* для позиционирования вложенных элементов */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 12px;
+}
+
+.icons-column .icon-button img {
+  width: 40px;
+  height: 40px;
+  border-radius: 0%;
+  position: relative;
+  z-index: 1;
+}
+
+.icons-column .icon-button::after {
+  content: attr(data-count);
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 1px 4px;
+  border-radius: 4px;
+  z-index: 2;
+}
+
+.weather{
+  margin-top: 0px;
+  margin-bottom: 15px;
+  font-size: 16px;
+  font-weight: bold;  
+  align-items: center;
+}
+
+.weather img{
+  width: 18px;
+  height: 18px;
 }
