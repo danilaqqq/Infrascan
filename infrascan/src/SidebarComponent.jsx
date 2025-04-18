@@ -1,6 +1,7 @@
 import React from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "./App.css";
+import { infrastructureCategories } from "./InfrastructureCategories";
 
 const Sidebar = ({
   location,
@@ -42,7 +43,10 @@ const Sidebar = ({
   searchTypeOfObjects,
   analyseNearbyInfrastructure,
   markerRefs,
-  searchResults
+  searchResults,
+  activeFilters,
+  toggleFilter,
+  shouldShowCategory
 }) => {
   return(
     <div className="sidebar">
@@ -90,200 +94,200 @@ const Sidebar = ({
 
         {(shops.length > 0 || pharmacies.length > 0 || transportNodes.length > 0 || clinics.length > 0 || malls.length > 0 || parks.length > 0 || banks.length > 0 || kindergartens.length > 0 || schools.length > 0) && (
           <>
-          <button className="clear-button" onClick={clearAllObjects}>
-              ✖ Очистить
+          <button className="analysis-button active" onClick={clearAllObjects}>
+              Очистить результаты поиска
           </button>
           <div className="sidebar-results-container">
             {analysisModeIsActive &&
               <div className="icons-column">
-              <button 
-              className="icon-button" 
-              data-count={shops.length}
-              onClick={() => {
-                  {toast.info('icon pressed');}
-                }}>
+              <button
+                className={`icon-button ${activeFilters.includes("shops") ? "active" : ""}`}
+                data-count={shops.length}
+                onClick={() => {if(shops.length != 0) toggleFilter("shops")}}>
                 <img src="icons/shopIcon.png" alt="Магазины" />
               </button>
               <button 
-                className="icon-button" 
+                className={`icon-button ${activeFilters.includes("pharmacies") ? "active" : ""}`}
                 data-count={pharmacies.length}
-                onClick={() => {
-                  {toast.info('icon pressed');}
-                }}>
+                onClick={() => {if(pharmacies.length != 0) toggleFilter("pharmacies")}}>
                 <img src="icons/pharmacyIcon.png" alt="Аптеки" />
               </button>
               <button 
-                className="icon-button" 
+                className={`icon-button ${activeFilters.includes("transportNodes") ? "active" : ""}`}
                 data-count={transportNodes.length}
-                onClick={() => {
-                  {toast.info('icon pressed');}
-                }}>
+                onClick={() => {if(transportNodes.length != 0) toggleFilter("transportNodes")}}>
                 <img src="icons/transportStopIcon.png" alt="Остановки транспорта" />
               </button>
               <button 
-                className="icon-button" 
+                className={`icon-button ${activeFilters.includes("clinics") ? "active" : ""}`}
                 data-count={clinics.length}
-                onClick={() => {
-                  {toast.info('icon pressed');}
-                }}>
+                onClick={() => {if(clinics.length != 0) toggleFilter("clinics")}}>
                 <img src="icons/hospitalIcon.png" alt="Поликлиники" />
               </button>
               <button 
-                className="icon-button" 
+                className={`icon-button ${activeFilters.includes("malls") ? "active" : ""}`}
                 data-count={malls.length}
-                onClick={() => {
-                  {toast.info('icon pressed');}
-                }}>
+                onClick={() => {if(malls.length != 0) toggleFilter("malls")}}>
                 <img src="icons/mallIcon.png" alt="Торговые центры" />
               </button>
               <button 
-                className="icon-button" 
+                className={`icon-button ${activeFilters.includes("parks") ? "active" : ""}`}
                 data-count={parks.length}
-                onClick={() => {
-                  {toast.info('icon pressed');}
-                }}>
+                onClick={() => {if(parks.length != 0) toggleFilter("parks")}}>
                 <img src="icons/parkIcon.png" alt="Парки" />
               </button>
               <button 
-                className="icon-button" 
+                className={`icon-button ${activeFilters.includes("banks") ? "active" : ""}`}
                 data-count={banks.length}
-                onClick={() => {
-                  {toast.info('icon pressed');}
-                }}>
+                onClick={() => {if(banks.length != 0) toggleFilter("banks")}}>
                 <img src="icons/bankIcon.png" alt="Банк" />
               </button>
               <button 
-                className="icon-button" 
+                className={`icon-button ${activeFilters.includes("kindergartens") ? "active" : ""}`}
                 data-count={kindergartens.length}
-                onClick={() => {
-                  {toast.info('icon pressed');}
-                }}>
+                onClick={() => {if(kindergartens.length != 0) toggleFilter("kindergartens")}}>
                 <img src="icons/kindergartenIcon.png" alt="Детские сады" />
               </button>
               <button 
-                className="icon-button" 
+                className={`icon-button ${activeFilters.includes("schools") ? "active" : ""}`}
                 data-count={schools.length}
-                onClick={() => {
-                  {toast.info('icon pressed');}
-                }}>
+                onClick={() => {if(schools.length != 0) toggleFilter("schools")}}>
                 <img src="icons/schoolIcon.png" alt="Школы" />
               </button>
             </div>}
             <div className="objects-column">
               <ul className={`shop-list ${isRemoving ? "removing" : ""}`}>
-                {shops.length > 0 &&
+                {shouldShowCategory("shops") && shops.length > 0 &&
                   <hr className="littledividerline" />
                 }
-                {shops.map((shop) => (
+                {shouldShowCategory("shops") && shops.map((shop) => (
                   <li key={shop.id}
                     className="shop-item"
                     onMouseEnter={() => { setHoveredShopId(shop.id); if (markerRefs.current[shop.id]) { markerRefs.current[shop.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredShopId(null); if (markerRefs.current[shop.id]) { markerRefs.current[shop.id].closePopup(); } }}>
                     <strong>{shop.name}</strong>
                     <p>🕒 {shop.hours}</p>
-                    <p>↔️ {shop.distance} метров</p>
+                    {!analysisModeIsActive &&
+                      <p>↔️ {shop.distance} метров</p>
+                    }
                   </li>
                 ))}
-                {pharmacies.length > 0 &&
+                {shouldShowCategory("pharmacies") && pharmacies.length > 0 &&
                   <hr className="littledividerline" />
                 }
-                {pharmacies.map((pharmacy) => (
+                {shouldShowCategory("pharmacies") && pharmacies.map((pharmacy) => (
                   <li key={pharmacy.id}
                     className="shop-item"
                     onMouseEnter={() => { setHoveredPharmacyId(pharmacy.id); if (markerRefs.current[pharmacy.id]) { markerRefs.current[pharmacy.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredPharmacyId(null); if (markerRefs.current[pharmacy.id]) { markerRefs.current[pharmacy.id].closePopup(); } }}>
                     <strong>{pharmacy.name}</strong>
                     <p>🕒 {pharmacy.hours}</p>
-                    <p>↔️ {pharmacy.distance} метров</p>
+                    {!analysisModeIsActive &&
+                      <p>↔️ {pharmacy.distance} метров</p>
+                    }
                   </li>
                 ))}
-                {transportNodes.length > 0 &&
+                {shouldShowCategory("transportNodes") && transportNodes.length > 0 &&
                   <hr className="littledividerline" />
                 }
-                {transportNodes.map((stop_position) => (
+                {shouldShowCategory("transportNodes") && transportNodes.map((stop_position) => (
                   <li key={stop_position.id}
                     className="shop-item"
                     onMouseEnter={() => { setHoveredTransportId(stop_position.id); if (markerRefs.current[stop_position.id]) { markerRefs.current[stop_position.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredTransportId(null); if (markerRefs.current[stop_position.id]) { markerRefs.current[stop_position.id].closePopup(); } }}>
                     <strong>{stop_position.name}</strong>
-                    <p>↔️ {stop_position.distance} метров</p>
+                    {!analysisModeIsActive &&
+                      <p>↔️ {stop_position.distance} метров</p>
+                    }
                   </li>
                 ))}
-                {clinics.length > 0 &&
+                {shouldShowCategory("clinics") && clinics.length > 0 &&
                   <hr className="littledividerline" />
                 }
-                {clinics.map((clinic) => (
+                {shouldShowCategory("clinics") && clinics.map((clinic) => (
                   <li key={clinic.id}
                     className="shop-item"
                     onMouseEnter={() => { setHoveredClinicId(clinic.id); if (markerRefs.current[clinic.id]) { markerRefs.current[clinic.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredClinicId(null); if (markerRefs.current[clinic.id]) { markerRefs.current[clinic.id].closePopup(); } }}>
                     <strong>{clinic.name}</strong>
                     <p>🕒 {clinic.hours}</p>
-                    <p>↔️ {clinic.distance} метров</p>
+                    {!analysisModeIsActive &&
+                      <p>↔️ {clinic.distance} метров</p>
+                    }
                   </li>
                 ))}
-                {malls.length > 0 &&
+                {shouldShowCategory("malls") && malls.length > 0 &&
                   <hr className="littledividerline" />
                 }
-                {malls.map((mall) => (
+                {shouldShowCategory("malls") && malls.map((mall) => (
                   <li key={mall.id}
                     className="shop-item"
                     onMouseEnter={() => { setHoveredMallId(mall.id); if (markerRefs.current[mall.id]) { markerRefs.current[mall.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredMallId(null); if (markerRefs.current[mall.id]) { markerRefs.current[mall.id].closePopup(); } }}>
                     <strong>{mall.name}</strong>
                     <p>🕒 {mall.hours}</p>
-                    <p>↔️ {mall.distance} метров</p>
+                    {!analysisModeIsActive &&
+                      <p>↔️ {mall.distance} метров</p>
+                    }
                   </li>
                 ))}
-                {parks.length > 0 &&
+                {shouldShowCategory("parks") && parks.length > 0 &&
                   <hr className="littledividerline" />
                 }
-                {parks.map((park) => (
+                {shouldShowCategory("parks") && parks.map((park) => (
                   <li key={park.id}
                     className="shop-item"
                     onMouseEnter={() => { setHoveredParkId(park.id); if (markerRefs.current[park.id]) { markerRefs.current[park.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredParkId(null); if (markerRefs.current[park.id]) { markerRefs.current[park.id].closePopup(); } }}>
                     <strong>{park.name}</strong>
-                    <p>↔️ {park.distance} метров</p>
+                    {!analysisModeIsActive &&
+                      <p>↔️ {park.distance} метров</p>
+                    }
                   </li>
                 ))}
-                {banks.length > 0 &&
+                {shouldShowCategory("banks") && banks.length > 0 &&
                   <hr className="littledividerline" />
                 }
-                {banks.map((bank) => (
+                {shouldShowCategory("banks") && banks.map((bank) => (
                   <li key={bank.id}
                     className="shop-item"
                     onMouseEnter={() => { setHoveredBankId(bank.id); if (markerRefs.current[bank.id]) { markerRefs.current[bank.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredBankId(null); if (markerRefs.current[bank.id]) { markerRefs.current[bank.id].closePopup(); } }}>
                     <strong>{bank.name}</strong>
                     <p>🕒 {bank.hours}</p>
-                    <p>↔️ {bank.distance} метров</p>
+                    {!analysisModeIsActive &&
+                      <p>↔️ {bank.distance} метров</p>
+                    }
                   </li>
                 ))}
-                {kindergartens.length > 0 &&
+                {shouldShowCategory("kindergartens") && kindergartens.length > 0 &&
                   <hr className="littledividerline" />
                 }
-                {kindergartens.map((kindergarten) => (
+                {shouldShowCategory("kindergartens") && kindergartens.map((kindergarten) => (
                   <li key={kindergarten.id}
                     className="shop-item"
                     onMouseEnter={() => { setHoveredKindergartenId(kindergarten.id); if (markerRefs.current[kindergarten.id]) { markerRefs.current[kindergarten.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredKindergartenId(null); if (markerRefs.current[kindergarten.id]) { markerRefs.current[kindergarten.id].closePopup(); } }}>
                     <strong>{kindergarten.name}</strong>
                     <p>🕒 {kindergarten.hours}</p>
-                    <p>↔️ {kindergarten.distance} метров</p>
+                    {!analysisModeIsActive &&
+                      <p>↔️ {kindergarten.distance} метров</p>
+                    }
                   </li>
                 ))}
-                {schools.length > 0 &&
+                {shouldShowCategory("schools") && schools.length > 0 &&
                   <hr className="littledividerline" />
                 }
-                {schools.map((school) => (
+                {shouldShowCategory("schools") && schools.map((school) => (
                   <li key={school.id}
                     className="shop-item"
                     onMouseEnter={() => { setHoveredSchoolId(school.id); if (markerRefs.current[school.id]) { markerRefs.current[school.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredSchoolId(null); if (markerRefs.current[school.id]) { markerRefs.current[school.id].closePopup(); } }}>
                     <strong>{school.name}</strong>
                     <p>🕒 {school.hours}</p>
-                    <p>↔️ {school.distance} метров</p>
+                    {!analysisModeIsActive &&
+                      <p>↔️ {school.distance} метров</p>
+                    }
                   </li>
                 ))}
               </ul>

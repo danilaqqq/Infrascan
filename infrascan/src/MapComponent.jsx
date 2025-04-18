@@ -40,7 +40,8 @@ const MapComponent = ({
   setSelection,
   setTempSelection,
   fetchInfrastructureInBounds,
-  setSearchResults
+  setSearchResults,
+  shouldShowCategory
 }) => {
   
   // Взаимодействие с картой при анализе - постановка точка или выделение области
@@ -131,7 +132,7 @@ const calculateArea = (bounds) => {
         fetchInfrastructureInBounds={fetchInfrastructureInBounds}
       />
 
-{shops.map((shop) => (
+        {shouldShowCategory("shops") && shops.map((shop) => (
           <Marker key={shop.id} position={[shop.lat, shop.lon]} icon={createCustomMarker("shop", hoveredShopId === shop.id)} ref={(ref) => (markerRefs.current[shop.id] = ref)} >
             <Popup>
               <strong>{shop.name}</strong> <br />
@@ -139,7 +140,7 @@ const calculateArea = (bounds) => {
             </Popup>
           </Marker>
         ))}
-        {pharmacies.map((pharmacy) => (
+        {shouldShowCategory("pharmacies") && pharmacies.map((pharmacy) => (
           <Marker key={pharmacy.id} position={[pharmacy.lat, pharmacy.lon]} icon={createCustomMarker("pharmacy", hoveredPharmacyId === pharmacy.id)} ref={(ref) => (markerRefs.current[pharmacy.id] = ref)} >
             <Popup>
               <strong>{pharmacy.name}</strong> <br />
@@ -147,14 +148,14 @@ const calculateArea = (bounds) => {
             </Popup>
           </Marker>
         ))}
-        {transportNodes.map((stop_position) => (
+        {shouldShowCategory("transportNodes") && transportNodes.map((stop_position) => (
           <Marker key={stop_position.id} position={[stop_position.lat, stop_position.lon]} icon={createCustomMarker("transportStop", hoveredTransportId === stop_position.id)} ref={(ref) => (markerRefs.current[stop_position.id] = ref)} >
             <Popup>
               <strong>{stop_position.name}</strong> <br />
             </Popup>
           </Marker>
         ))}
-        {clinics.map((clinic) => (
+        {shouldShowCategory("clinics") && clinics.map((clinic) => (
           <Marker key={clinic.id} position={[clinic.lat, clinic.lon]} icon={createCustomMarker("hospital", hoveredClinicId === clinic.id)} ref={(ref) => (markerRefs.current[clinic.id] = ref)} >
             <Popup>
               <strong>{clinic.name}</strong> <br />
@@ -162,7 +163,7 @@ const calculateArea = (bounds) => {
             </Popup>
           </Marker>
         ))}
-        {malls.map((mall) => (
+        {shouldShowCategory("malls") && malls.map((mall) => (
           <Marker key={mall.id} position={[mall.lat, mall.lon]} icon={createCustomMarker("mall", hoveredMallId === mall.id)} ref={(ref) => (markerRefs.current[mall.id] = ref)} >
             <Popup>
               <strong>{mall.name}</strong> <br />
@@ -170,14 +171,14 @@ const calculateArea = (bounds) => {
             </Popup>
           </Marker>
         ))}
-        {parks.map((park) => (
+        {shouldShowCategory("parks") && parks.map((park) => (
           <Marker key={park.id} position={[park.lat, park.lon]} icon={createCustomMarker("park", hoveredParkId === park.id)} ref={(ref) => (markerRefs.current[park.id] = ref)} >
             <Popup>
               <strong>{park.name}</strong> <br />
             </Popup>
           </Marker>
         ))}
-        {banks.map((bank) => (
+        {shouldShowCategory("banks") && banks.map((bank) => (
           <Marker key={bank.id} position={[bank.lat, bank.lon]} icon={createCustomMarker("bank", hoveredBankId === bank.id)} ref={(ref) => (markerRefs.current[bank.id] = ref)} >
             <Popup>
               <strong>{bank.name}</strong> <br />
@@ -185,7 +186,7 @@ const calculateArea = (bounds) => {
             </Popup>
           </Marker>
         ))}
-        {kindergartens.map((kindergarten) => (
+        {shouldShowCategory("kindergartens") && kindergartens.map((kindergarten) => (
           <Marker key={kindergarten.id} position={[kindergarten.lat, kindergarten.lon]} icon={createCustomMarker("kindergarten", hoveredKindergartenId === kindergarten.id)} ref={(ref) => (markerRefs.current[kindergarten.id] = ref)} >
             <Popup>
               <strong>{kindergarten.name}</strong> <br />
@@ -193,7 +194,7 @@ const calculateArea = (bounds) => {
             </Popup>
           </Marker>
         ))}
-        {schools.map((school) => (
+        {shouldShowCategory("schools") && schools.map((school) => (
           <Marker key={school.id} position={[school.lat, school.lon]} icon={createCustomMarker("school", hoveredSchoolId === school.id)} ref={(ref) => (markerRefs.current[school.id] = ref)} >
             <Popup>
               <strong>{school.name}</strong> <br />

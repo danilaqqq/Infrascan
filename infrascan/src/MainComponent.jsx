@@ -45,6 +45,8 @@ const MainComponent = () => {
     let latestAnalysisRequestId = 0;
     const analysisAbortControllerRef = useRef(null);
 
+    const [activeFilters, setActiveFilters] = useState([]);
+
     const markerRefs = useRef({});
 
     // Определение местоположения
@@ -466,6 +468,20 @@ const MainComponent = () => {
         markerRefs.current = {};
       }
 
+      const toggleFilter = (category) => {
+        setActiveFilters((prevFilters) => {
+          if (prevFilters.includes(category)) {
+            return prevFilters.filter((item) => item !== category);
+          } else {
+            return [...prevFilters, category];
+          }
+        });
+      };
+
+      const shouldShowCategory = (category) => {
+        return activeFilters.length === 0 || activeFilters.includes(category);
+      };
+
     const clearSelections = () => {
     setSelection(null);
     setTempSelection(null);
@@ -492,6 +508,7 @@ const MainComponent = () => {
       setKindergartens([]);
       setSchools([]);
 
+      setActiveFilters([]);
       setIsRemoving(false);
     }, 300);
   };
@@ -540,6 +557,9 @@ const MainComponent = () => {
                 analyseNearbyInfrastructure={analyseNearbyInfrastructure}
                 markerRefs={markerRefs}
                 searchResults={searchResults}
+                activeFilters={activeFilters}
+                toggleFilter={toggleFilter}
+                shouldShowCategory={shouldShowCategory}
           />
           <MapComponent
                 position={position}
@@ -577,6 +597,7 @@ const MainComponent = () => {
                 setTempSelection={setTempSelection}
                 fetchInfrastructureInBounds={fetchInfrastructureInBounds}
                 setSearchResults={setSearchResults}
+                shouldShowCategory={shouldShowCategory}
           />
         </div>
       );
