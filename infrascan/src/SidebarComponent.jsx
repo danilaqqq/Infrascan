@@ -1,7 +1,8 @@
 import React from "react";
 import { toast, ToastContainer } from "react-toastify";
-import "./App.css";
+import "./SidebarComponent.css";
 import { infrastructureCategories } from "./InfrastructureCategories";
+import SearchBar from "./SearchComponent";
 
 const Sidebar = ({
   location,
@@ -17,24 +18,16 @@ const Sidebar = ({
   banks,
   kindergartens,
   schools,
-  hoveredShopId,
   setHoveredShopId,
-  hoveredPharmacyId,
   setHoveredPharmacyId,
-  hoveredTransportId,
   setHoveredTransportId,
-  hoveredClinicId,
   setHoveredClinicId,
-  hoveredMallId,
   setHoveredMallId,
-  hoveredParkId,
   setHoveredParkId,
-  hoveredBankId,
   setHoveredBankId,
-  hoveredKindergartenId,
   setHoveredKindergartenId,
-  hoveredSchoolId,
   setHoveredSchoolId,
+  setHoveredSearchResultId,
   isRemoving,
   analysisModeIsActive,
   setAnalysisModeIsActive,
@@ -46,7 +39,12 @@ const Sidebar = ({
   searchResults,
   activeFilters,
   toggleFilter,
-  shouldShowCategory
+  shouldShowCategory,
+  map,
+  setSearchResults,
+  selection,
+  tempSelection,
+  switchHoursToRus
 }) => {
   return(
     <div className="sidebar">
@@ -81,7 +79,7 @@ const Sidebar = ({
         {(location.country == 'Неизвестно') &&
           <p>Местоположение не определено</p>
         }
-        <input className="searchbar" type="text" placeholder="Поиск.."></input>
+        {map && <SearchBar map={map} setSearchResults={setSearchResults}/>}
         <button
           className={`analysis-button ${analysisModeIsActive ? 'active' : ''}`}
           onClick={() => {
@@ -92,7 +90,7 @@ const Sidebar = ({
         </button>
         <hr className="dividerline" />
 
-        {(shops.length > 0 || pharmacies.length > 0 || transportNodes.length > 0 || clinics.length > 0 || malls.length > 0 || parks.length > 0 || banks.length > 0 || kindergartens.length > 0 || schools.length > 0) && (
+        {(shops.length > 0 || pharmacies.length > 0 || transportNodes.length > 0 || clinics.length > 0 || malls.length > 0 || parks.length > 0 || banks.length > 0 || kindergartens.length > 0 || schools.length > 0 || searchResults.length > 0) && (
           <>
           <button className="analysis-button active" onClick={clearAllObjects}>
               Очистить результаты поиска
@@ -166,8 +164,8 @@ const Sidebar = ({
                     onMouseEnter={() => { setHoveredShopId(shop.id); if (markerRefs.current[shop.id]) { markerRefs.current[shop.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredShopId(null); if (markerRefs.current[shop.id]) { markerRefs.current[shop.id].closePopup(); } }}>
                     <strong>{shop.name}</strong>
-                    <p>🕒 {shop.hours}</p>
-                    {!analysisModeIsActive &&
+                    <p>🕒 {switchHoursToRus(shop.hours)}</p>
+                    {(!selection && !tempSelection) &&
                       <p>↔️ {shop.distance} метров</p>
                     }
                   </li>
@@ -181,8 +179,8 @@ const Sidebar = ({
                     onMouseEnter={() => { setHoveredPharmacyId(pharmacy.id); if (markerRefs.current[pharmacy.id]) { markerRefs.current[pharmacy.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredPharmacyId(null); if (markerRefs.current[pharmacy.id]) { markerRefs.current[pharmacy.id].closePopup(); } }}>
                     <strong>{pharmacy.name}</strong>
-                    <p>🕒 {pharmacy.hours}</p>
-                    {!analysisModeIsActive &&
+                    <p>🕒 {switchHoursToRus(pharmacy.hours)}</p>
+                    {(!selection && !tempSelection) &&
                       <p>↔️ {pharmacy.distance} метров</p>
                     }
                   </li>
@@ -196,7 +194,7 @@ const Sidebar = ({
                     onMouseEnter={() => { setHoveredTransportId(stop_position.id); if (markerRefs.current[stop_position.id]) { markerRefs.current[stop_position.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredTransportId(null); if (markerRefs.current[stop_position.id]) { markerRefs.current[stop_position.id].closePopup(); } }}>
                     <strong>{stop_position.name}</strong>
-                    {!analysisModeIsActive &&
+                    {(!selection && !tempSelection) &&
                       <p>↔️ {stop_position.distance} метров</p>
                     }
                   </li>
@@ -210,8 +208,8 @@ const Sidebar = ({
                     onMouseEnter={() => { setHoveredClinicId(clinic.id); if (markerRefs.current[clinic.id]) { markerRefs.current[clinic.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredClinicId(null); if (markerRefs.current[clinic.id]) { markerRefs.current[clinic.id].closePopup(); } }}>
                     <strong>{clinic.name}</strong>
-                    <p>🕒 {clinic.hours}</p>
-                    {!analysisModeIsActive &&
+                    <p>🕒 {switchHoursToRus(clinic.hours)}</p>
+                    {(!selection && !tempSelection) &&
                       <p>↔️ {clinic.distance} метров</p>
                     }
                   </li>
@@ -225,8 +223,8 @@ const Sidebar = ({
                     onMouseEnter={() => { setHoveredMallId(mall.id); if (markerRefs.current[mall.id]) { markerRefs.current[mall.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredMallId(null); if (markerRefs.current[mall.id]) { markerRefs.current[mall.id].closePopup(); } }}>
                     <strong>{mall.name}</strong>
-                    <p>🕒 {mall.hours}</p>
-                    {!analysisModeIsActive &&
+                    <p>🕒 {switchHoursToRus(mall.hours)}</p>
+                    {(!selection && !tempSelection) &&
                       <p>↔️ {mall.distance} метров</p>
                     }
                   </li>
@@ -240,7 +238,7 @@ const Sidebar = ({
                     onMouseEnter={() => { setHoveredParkId(park.id); if (markerRefs.current[park.id]) { markerRefs.current[park.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredParkId(null); if (markerRefs.current[park.id]) { markerRefs.current[park.id].closePopup(); } }}>
                     <strong>{park.name}</strong>
-                    {!analysisModeIsActive &&
+                    {(!selection && !tempSelection) &&
                       <p>↔️ {park.distance} метров</p>
                     }
                   </li>
@@ -254,8 +252,8 @@ const Sidebar = ({
                     onMouseEnter={() => { setHoveredBankId(bank.id); if (markerRefs.current[bank.id]) { markerRefs.current[bank.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredBankId(null); if (markerRefs.current[bank.id]) { markerRefs.current[bank.id].closePopup(); } }}>
                     <strong>{bank.name}</strong>
-                    <p>🕒 {bank.hours}</p>
-                    {!analysisModeIsActive &&
+                    <p>🕒 {switchHoursToRus(bank.hours)}</p>
+                    {(!selection && !tempSelection) &&
                       <p>↔️ {bank.distance} метров</p>
                     }
                   </li>
@@ -269,8 +267,8 @@ const Sidebar = ({
                     onMouseEnter={() => { setHoveredKindergartenId(kindergarten.id); if (markerRefs.current[kindergarten.id]) { markerRefs.current[kindergarten.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredKindergartenId(null); if (markerRefs.current[kindergarten.id]) { markerRefs.current[kindergarten.id].closePopup(); } }}>
                     <strong>{kindergarten.name}</strong>
-                    <p>🕒 {kindergarten.hours}</p>
-                    {!analysisModeIsActive &&
+                    <p>🕒 {switchHoursToRus(kindergarten.hours)}</p>
+                    {(!selection && !tempSelection) &&
                       <p>↔️ {kindergarten.distance} метров</p>
                     }
                   </li>
@@ -284,10 +282,22 @@ const Sidebar = ({
                     onMouseEnter={() => { setHoveredSchoolId(school.id); if (markerRefs.current[school.id]) { markerRefs.current[school.id].openPopup(); } }}
                     onMouseLeave={() => { setHoveredSchoolId(null); if (markerRefs.current[school.id]) { markerRefs.current[school.id].closePopup(); } }}>
                     <strong>{school.name}</strong>
-                    <p>🕒 {school.hours}</p>
-                    {!analysisModeIsActive &&
+                    <p>🕒 {switchHoursToRus(school.hours)}</p>
+                    {(!selection && !tempSelection) &&
                       <p>↔️ {school.distance} метров</p>
                     }
+                  </li>
+                ))}
+                {searchResults.length > 0 &&
+                  <hr className="littledividerline" />
+                }
+                {searchResults.map((result) => (
+                  <li key={result.id}
+                    className="shop-item"
+                    onMouseEnter={() => { setHoveredSearchResultId(result.id); if (markerRefs.current[result.id]) { markerRefs.current[result.id].openPopup(); } }}
+                    onMouseLeave={() => { setHoveredSearchResultId(null); if (markerRefs.current[result.id]) { markerRefs.current[result.id].closePopup(); } }}>
+                    <strong>{result.name}</strong>
+                    <p>🕒 {switchHoursToRus(result.hours)}</p>
                   </li>
                 ))}
               </ul>

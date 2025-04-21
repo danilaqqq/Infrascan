@@ -1,8 +1,7 @@
 import { React, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Rectangle, useMapEvents, useMap } from "react-leaflet";
 import { toast, ToastContainer } from 'react-toastify'
-import "./App.css";
-import SearchBar from "./SearchComponent"
+import "./MapComponent.css";
 
 
 const MapComponent = ({
@@ -31,6 +30,7 @@ const MapComponent = ({
   hoveredBankId,
   hoveredKindergartenId,
   hoveredSchoolId,
+  hoveredSearchResultId,
   markerRefs,
   analysisModeIsActive,
   clearAllObjects,
@@ -41,7 +41,9 @@ const MapComponent = ({
   setTempSelection,
   fetchInfrastructureInBounds,
   setSearchResults,
-  shouldShowCategory
+  shouldShowCategory,
+  setMap,
+  switchHoursToRus
 }) => {
   
   // Взаимодействие с картой при анализе - постановка точка или выделение области
@@ -114,6 +116,19 @@ const calculateArea = (bounds) => {
   return latDiff * lngDiff;
 };
 
+
+const MapWithContext = ({ onMapReady }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (map) {
+      onMapReady(map); // безопасно передаём map наверх
+    }
+  }, [map, onMapReady]);
+
+  return null;
+};
+
   return (
     <MapContainer center={position} zoom={3} className="map-container">
       <TileLayer
@@ -131,12 +146,12 @@ const calculateArea = (bounds) => {
         setTempSelection={setTempSelection}
         fetchInfrastructureInBounds={fetchInfrastructureInBounds}
       />
-
+      <MapWithContext onMapReady={setMap} />
         {shouldShowCategory("shops") && shops.map((shop) => (
           <Marker key={shop.id} position={[shop.lat, shop.lon]} icon={createCustomMarker("shop", hoveredShopId === shop.id)} ref={(ref) => (markerRefs.current[shop.id] = ref)} >
             <Popup>
               <strong>{shop.name}</strong> <br />
-              🕒 {shop.hours}
+              🕒 {switchHoursToRus(shop.hours)}
             </Popup>
           </Marker>
         ))}
@@ -144,7 +159,7 @@ const calculateArea = (bounds) => {
           <Marker key={pharmacy.id} position={[pharmacy.lat, pharmacy.lon]} icon={createCustomMarker("pharmacy", hoveredPharmacyId === pharmacy.id)} ref={(ref) => (markerRefs.current[pharmacy.id] = ref)} >
             <Popup>
               <strong>{pharmacy.name}</strong> <br />
-              🕒 {pharmacy.hours}
+              🕒 {switchHoursToRus(pharmacy.hours)}
             </Popup>
           </Marker>
         ))}
@@ -159,7 +174,7 @@ const calculateArea = (bounds) => {
           <Marker key={clinic.id} position={[clinic.lat, clinic.lon]} icon={createCustomMarker("hospital", hoveredClinicId === clinic.id)} ref={(ref) => (markerRefs.current[clinic.id] = ref)} >
             <Popup>
               <strong>{clinic.name}</strong> <br />
-              🕒 {clinic.hours}
+              🕒 {switchHoursToRus(clinic.hours)}
             </Popup>
           </Marker>
         ))}
@@ -167,7 +182,7 @@ const calculateArea = (bounds) => {
           <Marker key={mall.id} position={[mall.lat, mall.lon]} icon={createCustomMarker("mall", hoveredMallId === mall.id)} ref={(ref) => (markerRefs.current[mall.id] = ref)} >
             <Popup>
               <strong>{mall.name}</strong> <br />
-              🕒 {mall.hours}
+              🕒 {switchHoursToRus(mall.hours)}
             </Popup>
           </Marker>
         ))}
@@ -182,7 +197,7 @@ const calculateArea = (bounds) => {
           <Marker key={bank.id} position={[bank.lat, bank.lon]} icon={createCustomMarker("bank", hoveredBankId === bank.id)} ref={(ref) => (markerRefs.current[bank.id] = ref)} >
             <Popup>
               <strong>{bank.name}</strong> <br />
-              🕒 {bank.hours}
+              🕒 {switchHoursToRus(bank.hours)}
             </Popup>
           </Marker>
         ))}
@@ -190,7 +205,7 @@ const calculateArea = (bounds) => {
           <Marker key={kindergarten.id} position={[kindergarten.lat, kindergarten.lon]} icon={createCustomMarker("kindergarten", hoveredKindergartenId === kindergarten.id)} ref={(ref) => (markerRefs.current[kindergarten.id] = ref)} >
             <Popup>
               <strong>{kindergarten.name}</strong> <br />
-              🕒 {kindergarten.hours}
+              🕒 {switchHoursToRus(kindergarten.hours)}
             </Popup>
           </Marker>
         ))}
@@ -198,7 +213,20 @@ const calculateArea = (bounds) => {
           <Marker key={school.id} position={[school.lat, school.lon]} icon={createCustomMarker("school", hoveredSchoolId === school.id)} ref={(ref) => (markerRefs.current[school.id] = ref)} >
             <Popup>
               <strong>{school.name}</strong> <br />
-              🕒 {school.hours}
+              🕒 {switchHoursToRus(school.hours)}
+            </Popup>
+          </Marker>
+        ))}
+        {searchResults.length > 0 && searchResults.map((result) => (
+          <Marker
+            key={result.id}
+            position={result.position}
+            icon={createCustomMarker("search", hoveredSearchResultId === result.id)} 
+            ref={(ref) => (markerRefs.current[result.id] = ref)}
+          >
+            <Popup>
+              <strong>{result.name}</strong> <br />
+              🕒 {switchHoursToRus(result.hours)}
             </Popup>
           </Marker>
         ))}
@@ -207,15 +235,6 @@ const calculateArea = (bounds) => {
             <Popup>Выбранная точка</Popup>
           </Marker>
         )}
-        {searchResults.length > 0 && searchResults.map((marker) => (
-          <Marker
-            key={marker.id}
-            position={marker.position}
-            icon={customIcon}
-          >
-            <Popup>{marker.name}</Popup>
-          </Marker>
-        ))}
         {tempSelection && (
           <Rectangle key={`react-${tempSelection.color}-${Date.now()}`} bounds={tempSelection.bounds} dashArray="4" color={tempSelection.color} fillColor={tempSelection.color} fillOpacity={0.2} />
         )}
@@ -233,7 +252,6 @@ const calculateArea = (bounds) => {
             ℹ️ Анализ в области: Нажмите ПКМ для выделения области, подтвердите ее с помощью ЛКМ. Слишком большая область будет выделена красным.
           </div>
         )}
-        <SearchBar setSearchResults={setSearchResults}/>
         <ToastContainer autoClose={8000}/>
     </MapContainer>
   );

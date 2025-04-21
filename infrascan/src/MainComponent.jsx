@@ -1,13 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import Sidebar from "./SidebarComponent";
 import MapComponent from "./MapComponent";
-import { getDistance, categoriesRadius, infrastructureCategories } from './InfrastructureCategories';
-import "./App.css";
-import L, { bounds, latLng } from "leaflet";
+import {infrastructureCategories } from './InfrastructureCategories';
+import "./MapComponent.css";
+import L from "leaflet";
 import { toast, ToastContainer } from 'react-toastify'
 import "leaflet/dist/leaflet.css"
-import markerIcon from "leaflet/dist/images/marker-icon.png";
-import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 const MainComponent = () => {
     const [position, setPosition] = useState([23.3345, 9.0598]);
@@ -37,9 +35,12 @@ const MainComponent = () => {
     const [schools, setSchools] = useState([]);
     const [hoveredSchoolId, setHoveredSchoolId] = useState(null);
 
+    const [searchResults, setSearchResults] = useState([]);
+    const [hoveredSearchResultsId, setHoveredSearchResultId] = useState(null);
+
     const [isRemoving, setIsRemoving] = useState(false);
 
-    const [searchResults, setSearchResults] = useState([]);
+    const [map, setMap] = useState(null);
 
     let analysisAbortController = null;
     let latestAnalysisRequestId = 0;
@@ -144,28 +145,28 @@ const MainComponent = () => {
 
     // Отправка API запросов
     const fetchOverpass = async (rawQuery, signal) => {
-    const cleanedQuery = rawQuery.replace(/\s+/g, ' ').trim();
-    const finalQuery = `[out:json];(${cleanedQuery});out center;`;
-    const encodedQuery = `data=${encodeURIComponent(finalQuery)}`;
-    console.log("QUERY:", cleanedQuery);
+      const cleanedQuery = rawQuery.replace(/\s+/g, ' ').trim();
+      const finalQuery = `[out:json];(${cleanedQuery});out center;`;
+      const encodedQuery = `data=${encodeURIComponent(finalQuery)}`;
+      console.log("QUERY:", cleanedQuery);
 
-    const response = await fetch("https://overpass-api.de/api/interpreter", {
-        method: "POST",
-        headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: encodedQuery,
-        signal,
-    });
+      const response = await fetch("https://overpass-api.de/api/interpreter", {
+          method: "POST",
+          headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: encodedQuery,
+          signal,
+      });
 
-    if (!response.ok) {
-        const errorText = await response.text(); // для отладки
-        console.error("Overpass error response:", errorText);
-        throw new Error(`Overpass error: ${response.status}`);
-    }
+      if (!response.ok) {
+          const errorText = await response.text(); // для отладки
+          console.error("Overpass error response:", errorText);
+          throw new Error(`Overpass error: ${response.status}`);
+      }
 
-    const data = await response.json();
-    return data.elements || [];
+      const data = await response.json();
+      return data.elements || [];
     };
 
 
@@ -239,7 +240,7 @@ const MainComponent = () => {
         schools: setSchools,
       };
     
-      const notFoundCategory = {
+    const notFoundCategory = {
         shops: 'магазины',
         pharmacies: 'аптеки',
         transport: 'остановки транспорта',
@@ -251,7 +252,7 @@ const MainComponent = () => {
         schools: 'школы',
       };
     
-      const analyseNearbyInfrastructure = async (latlng) => {
+    const analyseNearbyInfrastructure = async (latlng) => {
     
           //clearAllObjects();
           
@@ -381,7 +382,7 @@ const MainComponent = () => {
           markerRefs.current = {};
       }
     
-      const fetchInfrastructureInBounds = async (bounds) => {
+    const fetchInfrastructureInBounds = async (bounds) => {
         const [sw, ne] = bounds;
         const result = {};
         const currentRequestId = ++latestAnalysisRequestId;
@@ -428,7 +429,7 @@ const MainComponent = () => {
         if(notFoundCounter == infrastructureCategories.length) toast.info(`Не удалось найти никакую инфраструктуру в области.`);
       };
     
-      const searchTypeOfObjects = async (latlng, category) => {
+    const searchTypeOfObjects = async (latlng, category) => {
         clearAllObjects();
     
         const setter = categorySetters[category];
@@ -468,7 +469,7 @@ const MainComponent = () => {
         markerRefs.current = {};
       }
 
-      const toggleFilter = (category) => {
+    const toggleFilter = (category) => {
         setActiveFilters((prevFilters) => {
           if (prevFilters.includes(category)) {
             return prevFilters.filter((item) => item !== category);
@@ -478,9 +479,23 @@ const MainComponent = () => {
         });
       };
 
-      const shouldShowCategory = (category) => {
+    const shouldShowCategory = (category) => {
         return activeFilters.length === 0 || activeFilters.includes(category);
       };
+
+    const switchHoursToRus = (hours) => {
+        const daysMap = {
+          Mo: 'Пн',
+          Tu: 'Вт',
+          We: 'Ср',
+          Th: 'Чт',
+          Fr: 'Пт',
+          Sa: 'Сб',
+          Su: 'Вс'
+        };
+      
+        return hours.replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su)\b/g, match => daysMap[match]);
+      }
 
     const clearSelections = () => {
     setSelection(null);
@@ -508,6 +523,8 @@ const MainComponent = () => {
       setKindergartens([]);
       setSchools([]);
 
+      setSearchResults([]);
+
       setActiveFilters([]);
       setIsRemoving(false);
     }, 300);
@@ -530,24 +547,16 @@ const MainComponent = () => {
                 banks={banks}
                 kindergartens={kindergartens}
                 schools={schools}
-                hoveredShopId={hoveredShopId}
                 setHoveredShopId={setHoveredShopId}
-                hoveredPharmacyId={hoveredPharmacyId}
                 setHoveredPharmacyId={setHoveredPharmacyId}
-                hoveredTransportId={hoveredTransportId}
                 setHoveredTransportId={setHoveredTransportId}
-                hoveredClinicId={hoveredClinicId}
                 setHoveredClinicId={setHoveredClinicId}
-                hoveredMallId={hoveredMallId}
                 setHoveredMallId={setHoveredMallId}
-                hoveredParkId={hoveredParkId}
                 setHoveredParkId={setHoveredParkId}
-                hoveredBankId={hoveredBankId}
                 setHoveredBankId={setHoveredBankId}
-                hoveredKindergartenId={hoveredKindergartenId}
                 setHoveredKindergartenId={setHoveredKindergartenId}
-                hoveredSchoolId={hoveredSchoolId}
                 setHoveredSchoolId={setHoveredSchoolId}
+                setHoveredSearchResultId={setHoveredSearchResultId}
                 isRemoving={isRemoving}
                 analysisModeIsActive={analysisModeIsActive}
                 setAnalysisModeIsActive={setAnalysisModeIsActive}
@@ -560,6 +569,11 @@ const MainComponent = () => {
                 activeFilters={activeFilters}
                 toggleFilter={toggleFilter}
                 shouldShowCategory={shouldShowCategory}
+                map={map}
+                setSearchResults={setSearchResults}
+                selection={selection}
+                tempSelection={tempSelection}
+                switchHoursToRus={switchHoursToRus}
           />
           <MapComponent
                 position={position}
@@ -587,6 +601,7 @@ const MainComponent = () => {
                 hoveredBankId={hoveredBankId}
                 hoveredKindergarten={hoveredKindergartenId}
                 hoveredSchoolId={hoveredSchoolId}
+                hoveredSearchResultId={hoveredSearchResultsId}
                 markerRefs={markerRefs}
                 analysisModeIsActive={analysisModeIsActive}
                 clearAllObjects={clearAllObjects}
@@ -598,6 +613,8 @@ const MainComponent = () => {
                 fetchInfrastructureInBounds={fetchInfrastructureInBounds}
                 setSearchResults={setSearchResults}
                 shouldShowCategory={shouldShowCategory}
+                setMap={setMap}
+                switchHoursToRus={switchHoursToRus}
           />
         </div>
       );

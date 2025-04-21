@@ -1,0 +1,89 @@
+/* MapComponent.css */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.map-searchbar-wrapper {
+  top: 0px;
+  left: 0px;
+  width: 300px;
+  background-color: #d1e8f8;
+  padding: 0px;
+  border-radius: 8px;
+  z-index: 1000;
+}
+
+
+.map-searchbar-wrapper::-webkit-scrollbar {
+  width: 8px;
+}
+
+.map-searchbar-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.map-searchbar-wrapper::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.map-searchbar-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.searchbar-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.searchbar
+{
+  width: 284px;
+  height: 22px;
+  float: center;
+  padding: 6px;
+  margin-top: 8px;
+  margin-bottom: 6px;
+  font-size: 18px;
+  border: 1px solid #ccc;
+  border-radius: 24px;
+}
+
+.search-button {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  border-radius: 24px 24px 24px 24px;
+  cursor: pointer;
+  font-size: 16px;
+  height: 100%;
+}
+
+.search-button:hover {
+  background-color: #e0e0e0;
+}
+
+.dropdown {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  list-style: none;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.dropdown li {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.dropdown li:hover {
+  background-color: #eee;
+}

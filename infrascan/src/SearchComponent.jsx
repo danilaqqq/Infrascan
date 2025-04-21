@@ -1,16 +1,10 @@
 import { useRef, useState } from "react";
-import { useMap } from "react-leaflet";
 import L from "leaflet";
-import "./App.css";
+import "./SearchComponent.css";
+import { toast, ToastContainer } from 'react-toastify'
 
-const customSearchIcon = new L.Icon({
-  iconUrl: "/icons/bankIcon.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-
-export default function SearchBar({ setSearchResults }) {
-  const map = useMap();
+export default function SearchBar({ map, setSearchResults }) {
+  
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
 
@@ -18,7 +12,7 @@ export default function SearchBar({ setSearchResults }) {
     if (!input) return;
 
     const center = map.getCenter();
-    const radius = 5000;
+    const radius = 2000;
 
     const queryOverpass = `
       [out:json];
@@ -43,14 +37,17 @@ export default function SearchBar({ setSearchResults }) {
         position: el.type === "node"
           ? [el.lat, el.lon]
           : [el.center?.lat, el.center?.lon],
+        hours: el.tags.opening_hours || "Нет информации",
       })).filter(r => r.position[0] && r.position[1]);
 
       setSearchResults(results);
-      setSuggestions(results.slice(0, 5));
+      console.log(results);
+      //setSuggestions(results.slice(0, 5));
 
       if (results.length > 0) {
         map.flyTo(results[0].position, 16);
       }
+      else toast.info("К сожалению, не удалось найти объект с таким названием в этой области");
     } catch (error) {
       console.error("Ошибка запроса Overpass API:", error);
     }
@@ -60,7 +57,7 @@ export default function SearchBar({ setSearchResults }) {
     <div className="map-searchbar-wrapper">
       <div className="searchbar-container">
         <input
-          className="searchbar2"
+          className="searchbar"
           type="text"
           placeholder="Поиск..."
           value={query}
@@ -75,14 +72,15 @@ export default function SearchBar({ setSearchResults }) {
           {suggestions.map((item) => (
             <li key={item.id} onClick={() => {
               map.flyTo(item.position, 16);
-              setQuery(item.name);
-              setSuggestions([]);
+              //setQuery(item.name);
+              //setSuggestions([]);
             }}>
               {item.name}
             </li>
           ))}
         </ul>
       )}
+      <ToastContainer autoClose={8000}/>
     </div>
   );
 }
