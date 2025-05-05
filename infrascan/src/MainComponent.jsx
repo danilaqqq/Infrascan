@@ -575,6 +575,7 @@ const MainComponent = () => {
                 tempSelection={tempSelection}
                 switchHoursToRus={switchHoursToRus}
           />
+          <ToastContainer autoClose={8000}/>
           <MapComponent
                 position={position}
                 marker={marker}

@@ -155,9 +155,12 @@ const Sidebar = ({
             </div>}
             <div className="objects-column">
               <ul className={`shop-list ${isRemoving ? "removing" : ""}`}>
-                {shouldShowCategory("shops") && shops.length > 0 &&
-                  <hr className="littledividerline" />
-                }
+                {shouldShowCategory("shops") && shops.length > 0 && (
+                  <>
+                    <hr className="littledividerline" />
+                    <p className="category-name-text">Продовольственные магазины</p>
+                  </>
+                )}
                 {shouldShowCategory("shops") && shops.map((shop) => (
                   <li key={shop.id}
                     className="shop-item"
@@ -170,9 +173,12 @@ const Sidebar = ({
                     }
                   </li>
                 ))}
-                {shouldShowCategory("pharmacies") && pharmacies.length > 0 &&
-                  <hr className="littledividerline" />
-                }
+                {shouldShowCategory("pharmacies") && pharmacies.length > 0 && (
+                  <>
+                    <hr className="littledividerline" />
+                    <p className="category-name-text">Аптеки</p>
+                  </>
+                )}
                 {shouldShowCategory("pharmacies") && pharmacies.map((pharmacy) => (
                   <li key={pharmacy.id}
                     className="shop-item"
@@ -185,9 +191,12 @@ const Sidebar = ({
                     }
                   </li>
                 ))}
-                {shouldShowCategory("transportNodes") && transportNodes.length > 0 &&
-                  <hr className="littledividerline" />
-                }
+                {shouldShowCategory("transportNodes") && transportNodes.length > 0 && (
+                  <>
+                    <hr className="littledividerline" />
+                    <p className="category-name-text">Остановки транспорта</p>
+                  </>
+                )}
                 {shouldShowCategory("transportNodes") && transportNodes.map((stop_position) => (
                   <li key={stop_position.id}
                     className="shop-item"
@@ -199,9 +208,12 @@ const Sidebar = ({
                     }
                   </li>
                 ))}
-                {shouldShowCategory("clinics") && clinics.length > 0 &&
-                  <hr className="littledividerline" />
-                }
+                {shouldShowCategory("clinics") && clinics.length > 0 && (
+                  <>
+                    <hr className="littledividerline" />
+                    <p className="category-name-text">Поликлиники и больницы</p>
+                  </>
+                )}
                 {shouldShowCategory("clinics") && clinics.map((clinic) => (
                   <li key={clinic.id}
                     className="shop-item"
@@ -214,9 +226,12 @@ const Sidebar = ({
                     }
                   </li>
                 ))}
-                {shouldShowCategory("malls") && malls.length > 0 &&
-                  <hr className="littledividerline" />
-                }
+                {shouldShowCategory("malls") && malls.length > 0 && (
+                  <>
+                    <hr className="littledividerline" />
+                    <p className="category-name-text">Торговые центры</p>
+                  </>
+                )}
                 {shouldShowCategory("malls") && malls.map((mall) => (
                   <li key={mall.id}
                     className="shop-item"
@@ -229,9 +244,12 @@ const Sidebar = ({
                     }
                   </li>
                 ))}
-                {shouldShowCategory("parks") && parks.length > 0 &&
-                  <hr className="littledividerline" />
-                }
+                {shouldShowCategory("parks") && parks.length > 0 && (
+                  <>
+                    <hr className="littledividerline" />
+                    <p className="category-name-text">Парки и скверы</p>
+                  </>
+                )}
                 {shouldShowCategory("parks") && parks.map((park) => (
                   <li key={park.id}
                     className="shop-item"
@@ -243,9 +261,12 @@ const Sidebar = ({
                     }
                   </li>
                 ))}
-                {shouldShowCategory("banks") && banks.length > 0 &&
-                  <hr className="littledividerline" />
-                }
+                {shouldShowCategory("banks") && banks.length > 0 && (
+                  <>
+                    <hr className="littledividerline" />
+                    <p className="category-name-text">Отделения банков</p>
+                  </>
+                )}
                 {shouldShowCategory("banks") && banks.map((bank) => (
                   <li key={bank.id}
                     className="shop-item"
@@ -258,9 +279,12 @@ const Sidebar = ({
                     }
                   </li>
                 ))}
-                {shouldShowCategory("kindergartens") && kindergartens.length > 0 &&
-                  <hr className="littledividerline" />
-                }
+                {shouldShowCategory("kindergartens") && kindergartens.length > 0 && (
+                  <>
+                    <hr className="littledividerline" />
+                    <p className="category-name-text">Детские сады</p>
+                  </>
+                )}
                 {shouldShowCategory("kindergartens") && kindergartens.map((kindergarten) => (
                   <li key={kindergarten.id}
                     className="shop-item"
@@ -273,9 +297,12 @@ const Sidebar = ({
                     }
                   </li>
                 ))}
-                {shouldShowCategory("schools") && schools.length > 0 &&
-                  <hr className="littledividerline" />
-                }
+                {shouldShowCategory("schools") && schools.length > 0 && (
+                  <>
+                    <hr className="littledividerline" />
+                    <p className="category-name-text">Школы</p>
+                  </>
+                )}
                 {shouldShowCategory("schools") && schools.map((school) => (
                   <li key={school.id}
                     className="shop-item"
@@ -354,7 +381,6 @@ const Sidebar = ({
             if (analysisModeIsActive) {toast.error('Вы не можете проводить поиск по категории пока находитесь в режиме анализа');}
           }}><img src="icons/schoolIcon.png" alt="Школы" /></button><div className="category-label">Школы</div></div>
         </div>
-        <ToastContainer autoClose={8000} />
       </div>
   );
 };

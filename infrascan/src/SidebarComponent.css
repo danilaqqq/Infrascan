@@ -112,6 +112,13 @@ html, body, #root {
   margin-bottom: 8px;
 }
 
+.category-name-text
+{
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+}
+
 .sidebar-results-container {
     display: flex;
     flex-direction: row;
@@ -131,8 +138,9 @@ html, body, #root {
 }
 
 .icons-column .icon-button {
-    background-color: #4CAF50; 
-    border: 1px solid green; 
+    background-color: #4D66CC; 
+    border: 1px solid blue; 
+    border-radius: 12px;
     color: white; 
     cursor: pointer; 
     width: 50%; 
