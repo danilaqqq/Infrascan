@@ -130,7 +130,7 @@ const MapWithContext = ({ onMapReady }) => {
 };
 
   return (
-    <MapContainer center={position} zoom={3} className="map-container">
+    <MapContainer key={`${position[0]}-${position[1]}`} center={position} zoom={10} className="map-container">
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; OpenStreetMap contributors'

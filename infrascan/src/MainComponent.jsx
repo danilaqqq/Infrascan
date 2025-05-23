@@ -10,7 +10,7 @@ import "leaflet/dist/leaflet.css"
 const MainComponent = () => {
     const [position, setPosition] = useState([23.3345, 9.0598]);
     const [location, setLocation] = useState({ country: "Неизвестно", region: "Неизвестно", city: "Неизвестно", countryCode: "xx" });
-    const [weather, setWeather] = useState({temp: null, descriptiion: "", icon: ""});
+    const [weather, setWeather] = useState({temp: null, descriptiion: "Не удалось определить погодные условия", icon: ""});
     const [marker, setMarker] = useState(null);
     const [selection, setSelection] = useState(null);
     const [tempSelection, setTempSelection] = useState(null);
@@ -50,32 +50,9 @@ const MainComponent = () => {
 
     const markerRefs = useRef({});
 
-    // Определение местоположения
+    const [firstUseEffect, setFirstUseEffect] = useState(false);
+
     /*useEffect(() => {
-      if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-            const { latitude, longitude } = pos.coords;
-
-            fetch("https://ipwho.is/?lang=ru")
-                .then((res) => res.json())
-                .then((data) => {
-                console.log(data.country, data.region, data.city, data.country_code);
-                setLocation({
-                    country: data.country || "Неизвестно",
-                    region: data.region || "Неизвестно",
-                    city: data.city || "Неизвестно",
-                    countryCode: data.country_code.toLowerCase() || ""
-                });
-                })
-                .catch((error) => console.error("Ошибка API местоположения:", error));
-            },
-            (error) => console.error("Ошибка геолокации:", error)
-        );
-      }
-    }, []);*/
-
-    useEffect(() => {
       const API_KEY = "8704b97c194f64383768b293c3022e0d";
     
       if ("geolocation" in navigator) {
@@ -93,6 +70,7 @@ const MainComponent = () => {
                   city: city || "Неизвестно",
                   countryCode: country_code?.toLowerCase() || ""
                 });
+                setPosition([latitude, longitude]);
     
                 // Запрос к погодному API
                 return fetch(
@@ -114,7 +92,113 @@ const MainComponent = () => {
           (error) => console.error("Ошибка геолокации:", error)
         );
       }
+    }, []);*/
+
+    useEffect(() => {      
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          () => {
+            // Получение геолокации
+            fetch("https://ipwho.is/?lang=ru")
+              .then((res) => res.json())
+              .then((data) => {
+                const { country, region, city, country_code, latitude, longitude } = data;
+    
+                setLocation({
+                  country: country || "Неизвестно",
+                  region: region || "Неизвестно",
+                  city: city || "Неизвестно",
+                  countryCode: country_code?.toLowerCase() || ""
+                });
+                setPosition([latitude, longitude]);
+                })
+              .catch((error) => console.error("Ошибка при получении данных:", error));
+          },
+          (error) => console.error("Ошибка геолокации:", error)
+        );
+      }
+
+      
     }, []);
+
+    useEffect(() => {
+      
+      let lat, lon;
+
+      if(Array.isArray(position)){
+        [lat, lon] = position;
+      }
+      else if(position && typeof position === "object") {
+        lat = position.lat;
+        lon = position.lng;
+      }
+      
+      if(lat === undefined || lon === undefined) {
+        console.warn("lat или lon не определены");
+        return
+      }
+
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ru`)
+        .then(res => res.json())
+        .then(data => {
+          setLocation({
+            country: data.address.country || "Неизвестно",
+            region: data.address.state || "Неизвестно",
+            city: data.address.city || data.address.town || data.address.village || "Неизвестно",
+            countryCode: data.address.country_code || "xx"
+          });
+        })
+        .catch(err => {
+          console.error("Ошибка при получении локации по координатам:", err);
+          setLocation({
+            country: "Неизвестно",
+            region: "Неизвестно",
+            city: "Неизвестно",
+            countryCode: "xx"
+          });
+        });
+  }, [position]);
+
+useEffect(() => {
+    let lat, lon;
+
+    if(Array.isArray(position)){
+      [lat, lon] = position;
+    }
+    else if(position && typeof position === "object") {
+      lat = position.lat;
+      lon = position.lng;
+    }
+      
+    if(lat === undefined || lon === undefined) {
+      console.warn("lat или lon не определены");
+      return
+    }
+    const API_KEY = "8704b97c194f64383768b293c3022e0d";
+
+    if (lat && lon) {
+      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${API_KEY}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Ошибка при запросе к погодному API");
+          return res.json();
+        })
+        .then((weatherData) => {
+          setWeather({
+            temp: Math.round(weatherData.main.temp),
+            description: weatherData.weather[0].description === "небольшой проливной дождь" ? "небольшой дождь" : weatherData.weather[0].description,
+            icon: weatherData.weather[0].icon
+          });
+        })
+        .catch((error) => {
+          console.error("Ошибка при получении погоды:", error);
+          setWeather({
+            temp: null,
+            description: "Не удалось получить погодные данные",
+            icon: ""
+          });
+        });
+    }
+  }, [position]);
     
 
     // Создание кастомного маркера
@@ -575,7 +659,7 @@ const MainComponent = () => {
                 tempSelection={tempSelection}
                 switchHoursToRus={switchHoursToRus}
           />
-          <ToastContainer autoClose={8000}/>
+          <ToastContainer toastClassName="custom-toast" autoClose={8000} style={{zIndex: 9999}} closeOnClick position="top-right"/>
           <MapComponent
                 position={position}
                 marker={marker}

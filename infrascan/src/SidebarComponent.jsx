@@ -54,9 +54,10 @@ const Sidebar = ({
           width="350" 
           height="160"
         />
-        <h2 className="yourlocationtext">Ваше местоположение:</h2>
+        <h2 className="yourlocationtext"></h2>
         {(location.country != 'Неизвестно') &&
           <p className="location">
+            Погода в городе&nbsp;
             <img
               src={
                 location.countryCode==="ru"
@@ -65,10 +66,10 @@ const Sidebar = ({
               alt="Флаг"
               className="flag"
             />
-            {location.country}, {location.region}, {location.city}
+            {location.city}:
           </p>
         }
-        {weather.temp && (
+        {weather.temp && location.country != 'Неизвестно' && (
           <p className="weather">
             <img
               src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
@@ -92,9 +93,12 @@ const Sidebar = ({
 
         {(shops.length > 0 || pharmacies.length > 0 || transportNodes.length > 0 || clinics.length > 0 || malls.length > 0 || parks.length > 0 || banks.length > 0 || kindergartens.length > 0 || schools.length > 0 || searchResults.length > 0) && (
           <>
-          <button className="analysis-button active" onClick={clearAllObjects}>
-              Очистить результаты поиска
-          </button>
+            <div className="search-header">
+              <h2 className="yourlocationtext">Результаты поиска</h2>
+              <button className="clear-button" onClick={clearAllObjects}>
+                  <img src="icons/removeSearchResults.png" alt="Очистить"/>
+              </button>
+            </div>
           <div className="sidebar-results-container">
             {analysisModeIsActive &&
               <div className="icons-column">

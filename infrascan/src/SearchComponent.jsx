@@ -47,7 +47,7 @@ export default function SearchBar({ map, setSearchResults }) {
       if (results.length > 0) {
         map.flyTo(results[0].position, 16);
       }
-      else toast.info("К сожалению, не удалось найти объект с таким названием в этой области");
+      else toast.info("К сожалению, не удалось найти объект с таким названием в радиусе " + radius + " метров");
     } catch (error) {
       console.error("Ошибка запроса Overpass API:", error);
     }

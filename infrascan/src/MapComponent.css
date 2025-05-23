@@ -8,6 +8,14 @@ html, body, #root {
     display: flex;
     height: 100%;
     width: 100%;
+    position: relative;
+    z-index: 1;
+}
+
+.custom-toast {
+    width: 400px !important;
+    min-height: 80px !important;
+    font-size: 18px;
 }
 
 .map-container {
@@ -16,6 +24,7 @@ html, body, #root {
     position: relative;
     height: 100%;
     width: 80%;
+    z-index: 1;
   }
 
 .map-tooltip {

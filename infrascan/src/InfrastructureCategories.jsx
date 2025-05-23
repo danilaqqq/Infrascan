@@ -193,22 +193,26 @@ const infrastructureCategories = [
       radius: categoriesRadius.banks,
       query: (lat, lng, radius) => `
         node["amenity"="bank"](around:${radius},${lat},${lng});
+        way["amenity"="bank"](around:${radius},${lat},${lng});
+        relation["amenity"="bank"](around:${radius},${lat},${lng});
       `,
       areaQuery: (bbox) => `
         node["amenity"="bank"](${bbox});
+        way["amenity"="bank"](${bbox});
+        relation["amenity"="bank"](${bbox});
       `,
       parser: (elements, lat, lng) => elements.map(el => ({
         id: el.id,
-        lat: el.lat,
-        lon: el.lon,
+        lat: el.lat ?? el.center?.lat,
+        lon: el.lon ?? el.center?.lon,
         name: el.tags.name || "Банк",
         hours: el.tags.opening_hours || "Нет информации",
-        distance: getDistance(lat, lng, el.lat, el.lon),
+        distance: getDistance(lat, lng, el.lat ?? el.center?.lat, el.lon ?? el.center?.lon),
       })),
       areaParser: (elements) => elements.map(el => ({
         id: el.id,
-        lat: el.lat,
-        lon: el.lon,
+        lat: el.lat ?? el.center?.lat,
+        lon: el.lon ?? el.center?.lon,
         name: el.tags.name || "Банк",
         hours: el.tags.opening_hours || "Нет информации",
       })),
